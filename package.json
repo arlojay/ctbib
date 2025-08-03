@@ -1,0 +1,19 @@
+{
+  "name": "chat-thing-because-im-bored",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build-server": "cd server && npm run build",
+    "build-client": "cd client && npm run build",
+    "build": "npm run build-server && npm run build-client",
+    "start": "npm run build && cd server && npm run run"
+  },
+  "keywords": [],
+  "author": "arlojay",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

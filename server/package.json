@@ -1,0 +1,22 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "run": "node dist/index",
+    "start": "npm run build && npm run start"
+  },
+  "keywords": [],
+  "author": "arlojay",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3"
+  }
+}
