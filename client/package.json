@@ -4,18 +4,14 @@
   "description": "",
   "private": true,
   "scripts": {
-    "build": "webpack"
+    "build": "webpack",
+    "build-dev": "webpack --watch"
   },
   "keywords": [],
   "author": "arlojay",
   "license": "ISC",
-  "type": "module",
-  "devDependencies": {
-    "ts-loader": "^9.5.2",
-    "webpack": "^5.101.0",
-    "webpack-cli": "^6.0.1"
-  },
   "dependencies": {
-    "copy-webpack-plugin": "^13.0.0"
+    "path-browserify": "^1.0.1",
+    "tiny-typed-emitter": "^2.1.0"
   }
 }

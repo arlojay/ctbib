@@ -5,18 +5,27 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "run": "node dist/index",
+    "build": "webpack",
+    "run": "node dist/server",
     "start": "npm run build && npm run start"
   },
   "keywords": [],
   "author": "arlojay",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
-    "express": "^5.1.0"
+    "@types/node": "^24.1.0",
+    "body-parser": "^2.2.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "mongodb": "^6.18.0",
+    "tiny-typed-emitter": "^2.1.0",
+    "websocket-express": "github:arlojay/websocket-express",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3"
+    "@types/express": "^5.0.3",
+    "@types/mongodb": "^4.0.6",
+    "@types/ws": "^8.18.1",
+    "webpack": "^5.101.0"
   }
 }

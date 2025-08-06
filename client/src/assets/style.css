@@ -1,0 +1,31 @@
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+.chat {
+    width: 100%;
+    height: 100%;
+
+    display: grid;
+
+    grid-template-rows: 1fr max-content;
+    .logs {
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+        overflow-y: auto;
+
+        .message {
+            text-wrap: wrap;
+            overflow-wrap: break-word;
+            white-space: break-word;
+        }
+    }
+    .input {
+        form {
+            display: grid;
+            grid-template-columns: 1fr max-content;
+        }
+    }
+}

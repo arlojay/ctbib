@@ -1,19 +1,16 @@
 import path from "path";
-import CopyWebpackPlugin from "copy-webpack-plugin";
 import { TsconfigPathsPlugin } from "tsconfig-paths-webpack-plugin";
 
 export default {
-    entry: "./src/app/index.ts",
+    entry: "./src/index.ts",
+    target: "node",
     output: {
-        filename: "bundle.js",
+        filename: "server.js",
         path: path.resolve(process.cwd(), "dist"),
         clean: true,
     },
     resolve: {
         extensions: [".ts", ".js"],
-        fallback: {
-            "path": "path-browserify"
-        },
         plugins: [
             new TsconfigPathsPlugin({
                 configFile: "./tsconfig.json"
@@ -29,14 +26,5 @@ export default {
             },
         ],
     },
-    plugins: [
-        new CopyWebpackPlugin({
-            patterns: [
-                { from: "src/index.html", to: "index.html" },
-                { from: "src/assets", to: "assets" },
-            ]
-        })
-    ],
-    devtool: "source-map",
     mode: "development",
 };
