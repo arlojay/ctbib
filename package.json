@@ -12,7 +12,7 @@
     "start": "npm run build && npm run start-server",
     "dev-server": "npm run build-common && npm run build-server && npm run start-server",
     "dev-client": "cd client && npm run build-dev",
-    "install-all": "npm i && cd client && npm i && cd ../server && npm i"
+    "install-all": "npm i && cd client && npm i && cd ../server && npm i && cd ../common && npm i"
   },
   "keywords": [],
   "author": "arlojay",
