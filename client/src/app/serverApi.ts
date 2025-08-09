@@ -1,4 +1,4 @@
-import { GetMessageRequest, GetMessageResponse, GetUserRequest, GetUserResponse, LoginCredentials, RegisterCredentials, SendMessageRequest, SendMessageResponse, SessionStartResponse, WhoamiResponse } from "@common/serverApi";
+import { GetMessagesRequest, GetMessagesResponse, GetMessageRequest, GetMessageResponse, GetUserRequest, GetUserResponse, LoginCredentials, RegisterCredentials, SendMessageRequest, SendMessageResponse, SessionStartResponse, WhoamiResponse, GetChannelRequest, GetChannelResponse, GetServerRequest, GetServerResponse } from "@common/serverApi";
 import path from "path";
 
 export const serverEndpoint = "http://localhost:3000";
@@ -17,6 +17,7 @@ async function request(endpoint: string, method: RequestMethod, payload?: object
         options.body = JSON.stringify(payload);
     } else {
         for(const key in payload) {
+            if(payload[key] == null) continue;
             endpointURL.searchParams.set(key, (payload as any)[key]);
         }
     }
@@ -64,4 +65,12 @@ export async function userInfo(user: GetUserRequest) {
 export async function messageInfo(message: GetMessageRequest) {
     return await request("message", "GET", message, token) as GetMessageResponse;
 }
-
+export async function fetchMessages(query: GetMessagesRequest) {
+    return await request("messages", "GET", query, token) as GetMessagesResponse;
+}
+export async function channelInfo(query: GetChannelRequest) {
+    return await request("channel", "GET", query, token) as GetChannelResponse;
+}
+export async function serverInfo(query: GetServerRequest) {
+    return await request("server", "GET", query, token) as GetServerResponse;
+}

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { Login } from "./login";
 import { AccountManager } from "./manager";
 import { ObjectId } from "mongodb";
+import { Server } from "../chat";
 
 export interface SerializedAccount {
     _id: ObjectId;
@@ -9,6 +10,7 @@ export interface SerializedAccount {
     username: string;
     creationDate: Date;
     lastLoginDate: Date;
+    servers: ObjectId[];
 }
 export class Account {
     public uuid: ObjectId;
@@ -17,6 +19,7 @@ export class Account {
     public creationDate: Date;
     public lastLoginDate: Date;
     public sessions: Set<string> = new Set;
+    public servers: ObjectId[] = new Array;
 
     public create(username: string, password: string) {
         this.username = username;
@@ -33,7 +36,8 @@ export class Account {
             login: this.login.uuid,
             username: this.username,
             creationDate: this.creationDate,
-            lastLoginDate: this.lastLoginDate
+            lastLoginDate: this.lastLoginDate,
+            servers: this.servers
         }
     }
     public async deserialize(data: SerializedAccount, accountManager: AccountManager) {
@@ -42,6 +46,7 @@ export class Account {
         this.username = data.username;
         this.creationDate = data.creationDate ?? new Date;
         this.lastLoginDate = data.lastLoginDate ?? new Date;
+        if(data.servers != null) this.servers = data.servers;
     }
 
     public createSession() {

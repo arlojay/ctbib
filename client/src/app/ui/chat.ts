@@ -1,39 +1,110 @@
-import { BinaryMessage } from "@common/chatbin";
 import { TypedEmitter } from "tiny-typed-emitter";
-import { clientCache } from "../clientCache";
+import { Message } from "../chat/message";
 
 export class ChatScreenEvents extends TypedEmitter<{
     "send": (message: string) => void;
-    "receive": (message: BinaryMessage) => void;
-    "load": (message: BinaryMessage) => void;
+    "receive": (message: Message) => void;
+    "load": (message: Message) => void;
     "fetch": (fromMessage: string, count: number) => void;
 }> {}
 
-export interface ChatScreenInfo {
-    lastMessage: string;
-}
-
-function createChatMessage(info: ChatScreenInfo, binaryMessage: BinaryMessage) {
-    const root = document.createElement("div");
-    root.classList.add("message");
-
-    const timeElement = document.createElement("time");
-    timeElement.textContent = binaryMessage.creationDate.toLocaleTimeString(navigator.language, { hour: "2-digit", minute: "2-digit" });
-
-    const authorElement = document.createElement("span");
-    clientCache.getUser(binaryMessage.author).then(user => {
-        authorElement.textContent = "<" + user.username + ">";
-    })
-
-    const contentElement = document.createElement("span");
-    contentElement.textContent = binaryMessage.content;
-
-    root.append(timeElement, authorElement, contentElement);
+function findChronologicallyAdjacentMessages(messages: Iterable<Message>, message: Message) {
+    let bestSucDt = Infinity;
+    let bestSucMessage: Message = null;
+    let bestPreDt = Infinity;
+    let bestPreMessage: Message = null;
     
-    return root;
+    for(const testingMessage of messages) {
+        const dt = testingMessage.creationDate.getTime() - message.creationDate.getTime();
+
+        if(dt >= 0) {
+            if(dt < bestSucDt) {
+                bestSucDt = dt;
+                bestSucMessage = testingMessage;
+            }
+        } else if(dt <= 0) {
+            if(-dt < bestPreDt) {
+                bestPreDt = -dt;
+                bestPreMessage = testingMessage;
+            }
+        }
+    }
+
+    return { succeeding: bestSucMessage, preceding: bestPreMessage };
 }
 
-export function createChatScreen(info: ChatScreenInfo, events: ChatScreenEvents) {
+function formatTime(date: Date) {
+    const current = new Date;
+    if(date.getDate() == current.getDate()) {
+        return date.toLocaleTimeString(navigator.language, {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    } else if(date.getDate() == current.getDate() - 1) {
+        return "Yesterday at " + date.toLocaleTimeString(navigator.language, {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    } else {
+        return date.toLocaleString(navigator.language, {
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true
+        });
+    }
+}
+
+function formatText(text: string): HTMLElement[] {
+    const span = document.createElement("span");
+    span.textContent = text;
+    return [ span ];
+}
+
+function createChatMessage(message: Message, mergeBefore: HTMLDivElement, assimilateAfter: HTMLDivElement) {
+    const textElement = document.createElement("div");
+    textElement.replaceChildren(...formatText(message.content));
+    textElement.classList.add("text");
+
+    if(assimilateAfter != null) {
+        const timeElement = assimilateAfter.querySelector("time");
+        timeElement.textContent = formatTime(message.creationDate);
+        timeElement.title = message.creationDate.toLocaleString();
+
+        const contentElement = assimilateAfter.querySelector(".content");
+        contentElement.insertAdjacentElement("afterbegin", textElement);
+        
+        return assimilateAfter;
+    } else if(mergeBefore != null) {
+        const contentElement = mergeBefore.querySelector(".content");
+        contentElement.insertAdjacentElement("beforeend", textElement);
+        
+        return mergeBefore;
+    } else {
+        const root = document.createElement("div");
+        root.classList.add("message");
+
+        const timeElement = document.createElement("time");
+        timeElement.textContent = formatTime(message.creationDate);
+        timeElement.title = message.creationDate.toLocaleString();
+
+        const authorElement = document.createElement("span");
+        authorElement.textContent = message.author.username;
+        authorElement.classList.add("author");
+
+        const contentElement = document.createElement("div");
+        contentElement.classList.add("content");
+        contentElement.append(textElement);
+
+        root.append(timeElement, authorElement, contentElement);
+        
+        return root;
+    }
+}
+
+export function createChatScreen(events: ChatScreenEvents) {
     const root = document.createElement("div");
     root.classList.add("chat");
 
@@ -41,12 +112,50 @@ export function createChatScreen(info: ChatScreenInfo, events: ChatScreenEvents)
     const logs = document.createElement("div");
     logs.classList.add("logs");
 
-    events.on("receive", message => {
-        logs.append(createChatMessage(info, message));
-    });
-    events.on("load", message => {
-        logs.append(createChatMessage(info, message));
-    });
+    const messageElements: Map<Message, HTMLDivElement> = new Map;
+
+    function addMessage(message: Message) {
+        const { succeeding, preceding } = findChronologicallyAdjacentMessages(messageElements.keys(), message);
+
+        const mergeBefore = (
+            preceding != null &&
+            preceding.author == message.author &&
+            message.creationDate.getTime() - preceding.creationDate.getTime() < (1000 * 60 * 7)
+        );
+        const mergeAfter = (
+            succeeding != null &&
+            succeeding.author == message.author &&
+            succeeding.creationDate.getTime() - message.creationDate.getTime() < (1000 * 60 * 7)
+        );
+        let scrollFactor = 0;
+        let boxHeight = 0;
+        let scrollHeight = 0;
+        if(succeeding == null) {
+            boxHeight = logs.getBoundingClientRect().height;
+            scrollHeight = logs.scrollHeight;
+            scrollFactor = scrollHeight - (boxHeight + logs.scrollTop);
+        }
+        const element = createChatMessage(
+            message,
+            mergeBefore ? messageElements.get(preceding) : null,
+            mergeAfter ? messageElements.get(succeeding) : null
+        );
+
+        
+        if(succeeding == null) {
+            logs.append(element);
+        } else {
+            messageElements.get(succeeding).insertAdjacentElement("beforebegin", element);
+        }
+        if(scrollFactor < 4 || scrollHeight < boxHeight) {
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        messageElements.set(message, element);
+    }
+
+    events.on("receive", addMessage);
+    events.on("load", addMessage);
 
 
     const inputContainer = document.createElement("div");
@@ -56,6 +165,8 @@ export function createChatScreen(info: ChatScreenInfo, events: ChatScreenEvents)
     inputForm.addEventListener("submit", event => {
         event.preventDefault();
         const content = messageField.value;
+        messageField.value = "";
+
         if(content.replace(/[\s\t\r\n]/g, "").length == 0) return;
         events.emit("send", content);
     })
@@ -72,7 +183,7 @@ export function createChatScreen(info: ChatScreenInfo, events: ChatScreenEvents)
 
 
     root.append(logs, inputContainer);
-    events.emit("fetch", info.lastMessage, 50);
+    events.emit("fetch", null, 50);
 
     return root;
 }

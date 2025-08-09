@@ -17,7 +17,7 @@ export class AccountManager {
                 deprecationErrors: true,
             }
         });
-        this.db = this.mongo.db("dev");
+        this.db = this.mongo.db("accounts");
     }
 
     public async connect() {
@@ -26,6 +26,8 @@ export class AccountManager {
     
     public async getLogin(uuid: ObjectId) {
         const dbAccount = await this.db.collection("logins").findOne<SerializedLogin>({ _id: uuid });
+
+        if(dbAccount == null) return null;
 
         const login = new Login;
         login.deserialize(dbAccount);
@@ -36,6 +38,8 @@ export class AccountManager {
     public async findByUUID(uuid: ObjectId) {
         if(this.accounts.has(uuid.toHexString())) return this.accounts.get(uuid.toHexString());
         const dbAccount = await this.db.collection("accounts").findOne<SerializedAccount>({ _id: uuid });
+
+        if(dbAccount == null) return null;
 
         const account = new Account;
         await account.deserialize(dbAccount, this);
@@ -89,6 +93,6 @@ export class AccountManager {
     }
 
     public async updateAccount(account: Account) {
-        await this.db.collection("accounts").findOneAndReplace({ _id: account.uuid }, account.serialize());
+        await this.db.collection("accounts").replaceOne({ _id: account.uuid }, account.serialize());
     }
 }
