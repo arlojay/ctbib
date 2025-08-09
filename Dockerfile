@@ -20,9 +20,8 @@ RUN cp src/package.json dist/package.json
 RUN cp src/client/package.json dist/client/package.json
 RUN cp src/server/package.json dist/server/package.json
 
-RUN useradd -ms /bin/bash runner
-RUN chown runner:runner dist/ -R
+RUN chown 1000:1000 dist/ -R
 
-USER runner
+USER 1000
 WORKDIR /ctbib/dist/
 CMD npm run start-server
