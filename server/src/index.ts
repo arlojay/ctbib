@@ -10,7 +10,7 @@ import { MessagePacket } from "@common/packet";
 import { ObjectId } from "mongodb";
 import { ChatManager, Message } from "./chat";
 import { createServer } from "node:https";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
 let accountManager: AccountManager;
 let chatManager: ChatManager;
@@ -313,14 +313,22 @@ function getSSLCertificates(directory: string) {
 
     const domains = readdirSync(liveDirectory);
     for(const domain of domains) {
-        const files = readdirSync(path.join(liveDirectory, domain));
-        const certificates: Map<string, Buffer> = new Map;
+        try {
+            const domainDir = path.join(liveDirectory, domain);
+            const stat = statSync(domainDir);
+            if(!stat.isDirectory()) continue;
 
-        for(const file of files) {
-            certificates.set(file, readFileSync(path.join(liveDirectory, domain, file)));
+            const files = readdirSync(domainDir);
+            const certificates: Map<string, Buffer> = new Map;
+
+            for(const file of files) {
+                certificates.set(file, readFileSync(path.join(domainDir, file)));
+            }
+
+            return certificates;
+        } catch(e) {
+            console.warn(e);
         }
-
-        return certificates;
     }
     return null;
 }
