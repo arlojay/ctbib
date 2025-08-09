@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack",
-    "run": "node dist/server",
+    "run": "node --env-file-if-exists=../server.env dist/server",
     "start": "npm run build && npm run start"
   },
   "keywords": [],

@@ -1,4 +1,3 @@
-process.loadEnvFile("../server.env");
 import * as ServerApi from "@common/serverApi.js";
 import express from "express";
 import path from "node:path";

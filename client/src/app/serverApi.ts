@@ -1,7 +1,7 @@
 import { GetMessagesRequest, GetMessagesResponse, GetMessageRequest, GetMessageResponse, GetUserRequest, GetUserResponse, LoginCredentials, RegisterCredentials, SendMessageRequest, SendMessageResponse, SessionStartResponse, WhoamiResponse, GetChannelRequest, GetChannelResponse, GetServerRequest, GetServerResponse } from "@common/serverApi";
 import path from "path";
 
-export const serverEndpoint = "http://localhost:3000";
+export const serverEndpoint = document.location.protocol + "//" + document.location.host;
 
 type RequestMethod = "POST" | "GET";
 
