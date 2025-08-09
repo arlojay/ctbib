@@ -1,4 +1,3 @@
-process.loadEnvFile("../.env");
 process.loadEnvFile("../server.env");
 import * as ServerApi from "@common/serverApi.js";
 import express from "express";
@@ -9,9 +8,8 @@ import { IncomingHttpHeaders } from "node:http";
 import { Router, WebSocketExpress } from "websocket-express";
 import { UserSocketSession } from "./user/userSocketSession";
 import { MessagePacket } from "@common/packet";
-import { randomUUID } from "node:crypto";
 import { ObjectId } from "mongodb";
-import { Channel, ChatManager, Message, Server } from "./chat";
+import { ChatManager, Message } from "./chat";
 
 let accountManager: AccountManager;
 let chatManager: ChatManager;
@@ -125,7 +123,7 @@ async function initExpress() {
     api.get("/whoami", async (req, res) => {
         const account: Account = res.locals.account;
 
-        if(account.servers.length == 0) account.servers.push(ObjectId.createFromHexString("68951ca4d64a3f741b61cf08"));
+        if(account.servers.length == 0) account.servers.push(ObjectId.createFromHexString(process.env.DEFAULT_SERVER_UUID));
         
         res.send({
             uuid: account.uuid.toHexString(),

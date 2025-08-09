@@ -1,6 +1,7 @@
 import { Db, MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import { Account, SerializedAccount } from "./account";
 import { Login, SerializedLogin } from "./login";
+import { buildMongoURI } from "../mongoURI";
 
 export class AccountManager {
     private mongo: MongoClient;
@@ -9,7 +10,12 @@ export class AccountManager {
     private sessions: Map<string, Account> = new Map;
 
     public constructor() {
-        const uri = "mongodb+srv://" + process.env.ACCOUNTS_DB_USERNAME + ":" + process.env.ACCOUNTS_DB_PASSWORD + "@accounts.iyrmu5l.mongodb.net/?retryWrites=true&w=majority&appName=Accounts";
+        const uri = buildMongoURI({
+            username: process.env.CHAT_CLUSTER_USERNAME,
+            password: process.env.CHAT_CLUSTER_PASSWORD,
+            host: process.env.CHAT_CLUSTER_HOST,
+            cluster: process.env.CHAT_CLUSTER_NAME
+        });
         this.mongo = new MongoClient(uri, {
             serverApi: {
                 version: ServerApiVersion.v1,

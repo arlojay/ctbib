@@ -3,6 +3,7 @@ import { Channel, SerializedChannel } from "./channel";
 import { Message, SerializedMessage } from "./message";
 import { SerializedServer, Server } from "./server";
 import { AccountManager } from "../accounts";
+import { buildMongoURI } from "../mongoURI";
 
 function messageCacheKey(messageUUID: ObjectId, channelUUID: ObjectId, serverUUID: ObjectId) {
     return messageUUID.toHexString() + "." + channelUUID.toHexString() + "." + serverUUID.toHexString();
@@ -19,7 +20,12 @@ export class ChatManager {
     private messages: Map<string, Message> = new Map;
 
     public constructor() {
-        const uri = "mongodb+srv://" + process.env.ACCOUNTS_DB_USERNAME + ":" + process.env.ACCOUNTS_DB_PASSWORD + "@accounts.iyrmu5l.mongodb.net/?retryWrites=true&w=majority&appName=Accounts";
+        const uri = buildMongoURI({
+            username: process.env.ACCOUNTS_CLUSTER_USERNAME,
+            password: process.env.ACCOUNTS_CLUSTER_PASSWORD,
+            host: process.env.ACCOUNTS_CLUSTER_HOST,
+            cluster: process.env.ACCOUNTS_CLUSTER_NAME
+        });
         this.mongo = new MongoClient(uri, {
             serverApi: {
                 version: ServerApiVersion.v1,
