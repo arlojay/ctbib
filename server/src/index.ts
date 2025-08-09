@@ -9,6 +9,8 @@ import { UserSocketSession } from "./user/userSocketSession";
 import { MessagePacket } from "@common/packet";
 import { ObjectId } from "mongodb";
 import { ChatManager, Message } from "./chat";
+import { createServer } from "node:https";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 let accountManager: AccountManager;
 let chatManager: ChatManager;
@@ -122,7 +124,9 @@ async function initExpress() {
     api.get("/whoami", async (req, res) => {
         const account: Account = res.locals.account;
 
-        if(account.servers.length == 0) account.servers.push(ObjectId.createFromHexString(process.env.DEFAULT_SERVER_UUID));
+        if(account.servers.length == 0 && process.env.DEFAULT_SERVER_UUID) {
+            account.servers.push(ObjectId.createFromHexString(process.env.DEFAULT_SERVER_UUID));
+        }
         
         res.send({
             uuid: account.uuid.toHexString(),
@@ -275,9 +279,50 @@ async function initExpress() {
     api.use((req, res) => {
         res.status(404).send({ error: "Not found" });
     });
-    
 
-    app.listen(3000, () => console.log("Listening on http://localhost:3000"));
+
+    {
+        const httpPort = +(process.env.HTTP_PORT ?? 80);
+        const httpsPort = +(process.env.HTTPS_PORT ?? 443);
+        const certFolder = path.resolve(process.env.CERTIFICATES_DIR ?? "/etc/letsencrypt/");
+
+        const certificates = getSSLCertificates(certFolder);
+        if(certificates == null) {
+            console.log("No certificates found in " + certFolder);
+            app.listen(httpPort, () => console.log("Listening on http://localhost:" + httpPort));
+        } else {
+            console.log("Found certificates!");
+            const server = createServer({
+                key: certificates.get("privkey.pem"),
+                cert: certificates.get("cert.pem")
+            });
+            app.attach(server);
+            server.listen(httpsPort, () => console.log("Listening on https://*:" + httpsPort));
+
+            const httpApp = express();
+            httpApp.use((req, res) => {
+                res.status(303).send("HTTPS required");
+            });
+            httpApp.listen(httpPort);
+        }
+}
+}
+function getSSLCertificates(directory: string) {
+    const liveDirectory = path.join(directory, "live");
+    if(!existsSync(liveDirectory)) return null;
+
+    const domains = readdirSync(liveDirectory);
+    for(const domain of domains) {
+        const files = readdirSync(path.join(liveDirectory, domain));
+        const certificates: Map<string, Buffer> = new Map;
+
+        for(const file of files) {
+            certificates.set(file, readFileSync(path.join(liveDirectory, domain, file)));
+        }
+
+        return certificates;
+    }
+    return null;
 }
 async function initMongo() {
     accountManager = new AccountManager;
