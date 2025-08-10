@@ -47,6 +47,15 @@ function getBearerToken(headers: IncomingHttpHeaders) {
 async function initExpress() {
     const app = new WebSocketExpress;
 
+    app.use((req, res, next) => {
+        const proxyIp = req.headers["x-forwarded-for"];
+        const socketIp = req.socket.remoteAddress;
+        let ipid = socketIp;
+        if(proxyIp != null && proxyIp.length > 0) ipid = proxyIp + "(" + ipid + ")";
+        console.log(`[${new Date().toLocaleString()}] ${ipid} ${req.method} ${req.path}`);
+        
+        next();
+    })
     app.use(express.static(path.join(process.cwd(), "../client/dist/")));
 
     const api = new Router();
@@ -317,6 +326,8 @@ function getSSLCertificates(directory: string) {
             const domainDir = path.join(liveDirectory, domain);
             const stat = statSync(domainDir);
             if(!stat.isDirectory()) continue;
+
+            console.log("Trying to load certificate directory " + domain);
 
             const files = readdirSync(domainDir);
             const certificates: Map<string, Buffer> = new Map;

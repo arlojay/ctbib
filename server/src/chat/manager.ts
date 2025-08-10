@@ -78,7 +78,6 @@ export class ChatManager {
 
         const messages: Message[] = new Array;
         for(const messageDocument of messageDocuments) {
-            console.log(messageDocument);
             const cacheKey = messageCacheKey(messageDocument._id, channelUUID, serverUUID);
             const message = new Message;
             message.setUUID(messageDocument._id);
@@ -94,7 +93,6 @@ export class ChatManager {
         return messages;
     }
     public async getChannel(uuid: ObjectId, serverUUID: ObjectId) {
-        console.log(uuid, serverUUID);
         const cacheKey = channelCacheKey(uuid, serverUUID);
         if(this.channels.has(cacheKey)) return this.channels.get(cacheKey);
 
