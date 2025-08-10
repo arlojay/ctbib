@@ -61,10 +61,10 @@ export const SMALLEST_F64 = 5e-324;
 
 export class BinaryBuffer {
     public buffer: ArrayBuffer;
-    public view: DataView<ArrayBuffer>;
+    public view: DataView;
     public index: number = 0;
     public littleEndian: boolean = true;
-    private array: Uint8Array<ArrayBuffer>;
+    private array: Uint8Array;
     public debug = false;
 
     constructor(buffer: ArrayBuffer) {

@@ -1,5 +1,5 @@
-import { BinaryBuffer } from "@common/serialization/binaryBuffer";
-import { Serializable } from "@common/serialization/serializable";
+import { BinaryBuffer } from "../serialization/binaryBuffer";
+import { Serializable } from "../serialization/serializable";
 
 export class BinaryUser extends Serializable {
     public uuid: string;

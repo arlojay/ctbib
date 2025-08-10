@@ -1,10 +1,22 @@
 {
-  "extends": "../tsconfig.json",
-  
   "compilerOptions": {
+    "rootDir": "../",
     "outDir": "./dist",
 
-    "lib": [ "esnext", "es2020", "dom" ]
+    "lib": ["esnext", "es2022", "dom"],
+
+    "module": "esnext",
+    "moduleResolution": "bundler",
+
+    "target": "es2022",
+
+    "paths": {
+      "@common/*": [ "../common/src/*" ]
+    },
+
+    "sourceMap": false,
+    "declaration": false,
+    "declarationMap": false,
   },
   "references": [
     { "path": "../common" }

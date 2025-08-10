@@ -1,4 +1,4 @@
-import * as ServerApi from "@common/serverApi.js";
+import * as ServerApi from "@common/serverApi";
 import express from "express";
 import path from "node:path";
 import bodyParser from "body-parser";
@@ -56,7 +56,13 @@ async function initExpress() {
         
         next();
     })
-    app.use(express.static(path.join(process.cwd(), "../client/dist/")));
+    
+    const hostClient = (process.env.HOST_CLIENT ?? "true").toLowerCase() == "true";
+    if(hostClient) {
+        const dir = path.resolve(path.join(process.cwd(), process.env.CLIENT_DIRECTORY ?? "../client/dist/"));
+        console.log("Serving client from " + dir);
+        app.use(express.static(dir));
+    }
 
     const api = new Router();
     app.use("/api", api);
@@ -291,13 +297,16 @@ async function initExpress() {
 
 
     {
+        const useTLS = (process.env.USE_TLS ?? "true").toLowerCase() == "true";
+
         const httpPort = +(process.env.HTTP_PORT ?? 80);
         const httpsPort = +(process.env.HTTPS_PORT ?? 443);
         const certFolder = path.resolve(process.env.CERTIFICATES_DIR ?? "/etc/letsencrypt/");
 
-        const certificates = getSSLCertificates(certFolder);
+        const certificates = useTLS ? getSSLCertificates(certFolder) : null;
         if(certificates == null) {
-            console.log("No certificates found in " + certFolder);
+            if(useTLS) console.log("No certificates found in " + certFolder);
+            else console.log("TLS is disabled; no certificates scanned");
             app.listen(httpPort, () => console.log("Listening on http://localhost:" + httpPort));
         } else {
             console.log("Found certificates!");

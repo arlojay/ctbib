@@ -1,6 +1,6 @@
-import { BinaryBuffer } from "@common/serialization/binaryBuffer";
+import { BinaryBuffer } from "../serialization/binaryBuffer";
 import { Packet, packetRegistry } from "./packet";
-import { BinaryMessage } from "@common/chatbin/message";
+import { BinaryMessage } from "../chatbin/message";
 
 export class MessagePacket extends Packet {
     public static readonly id = packetRegistry.register(this);

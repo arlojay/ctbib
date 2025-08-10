@@ -1,4 +1,4 @@
-import { BinaryBuffer, BOOL } from "@common/serialization/binaryBuffer";
+import { BinaryBuffer, BOOL } from "../serialization/binaryBuffer";
 import { Packet, packetRegistry } from "./packet";
 
 export class AuthorizationStatePacket extends Packet {

@@ -1,4 +1,4 @@
-import { BinaryBuffer } from "@common/serialization/binaryBuffer";
+import { BinaryBuffer } from "../serialization/binaryBuffer";
 import { Packet, packetRegistry } from "./packet";
 
 export class PingPacket extends Packet {

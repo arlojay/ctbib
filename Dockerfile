@@ -1,4 +1,4 @@
-FROM node:24
+FROM node:24 as builder
 
 WORKDIR /ctbib/
 RUN mkdir src
@@ -24,6 +24,9 @@ VOLUME /etc/letsencrypt
 RUN chown 1000:1000 dist/ -R
 RUN chown 1000:1000 /etc/letsencrypt -R
 
+
+FROM node:24-slim as runner
+COPY --from=builder /src/
 USER 1000
 WORKDIR /ctbib/dist/
 CMD npm run start-server

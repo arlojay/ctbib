@@ -1,13 +1,17 @@
-{
-  "extends": "../tsconfig.json",
-  
+{  
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": "../",
     "outDir": "./dist",
 
-    "lib": [ "es2020", "esnext", "dom" ],
+    "lib": [ "es2022", "esnext", "dom" ],
+    "target": "es2022",
 
+    "module": "esnext",
+    "moduleResolution": "bundler",
+
+    "sourceMap": false,
     "declaration": true,
-    "composite": true
+    "composite": true,
+    "declarationMap": false,
   }
 }

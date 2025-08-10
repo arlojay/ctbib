@@ -1,4 +1,4 @@
-import { flatPack, inflate, PackingOptions } from "./flatPackedObject";
+import { flatPack, inflate, PackingOptions } from "@common/serialization/flatPackedObject";
 
 let transactions = 0;
 let openTransactions = 0;

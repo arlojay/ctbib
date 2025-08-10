@@ -6,14 +6,13 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack",
-    "run": "node --env-file-if-exists=../server.env dist/server",
+    "run": "node --env-file-if-exists=server.env dist/server",
     "start": "npm run build && npm run start"
   },
   "keywords": [],
   "author": "arlojay",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^24.1.0",
     "body-parser": "^2.2.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
@@ -25,7 +24,12 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/mongodb": "^4.0.6",
+    "@types/node": "^24.2.1",
     "@types/ws": "^8.18.1",
-    "webpack": "^5.101.0"
+    "ts-loader": "^9.5.2",
+    "tsconfig-paths-webpack-plugin": "^4.2.0",
+    "typescript": "^5.9.2",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1"
   }
 }

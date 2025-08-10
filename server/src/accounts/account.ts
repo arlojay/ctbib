@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import { Login } from "./login";
 import { AccountManager } from "./manager";
 import { ObjectId } from "mongodb";
-import { Server } from "../chat";
 
 export interface SerializedAccount {
     _id: ObjectId;
@@ -16,8 +15,8 @@ export class Account {
     public uuid: ObjectId;
     public login = new Login;
     public username: string;
-    public creationDate: Date;
-    public lastLoginDate: Date;
+    public creationDate = new Date;
+    public lastLoginDate = new Date;
     public sessions: Set<string> = new Set;
     public servers: ObjectId[] = new Array;
 

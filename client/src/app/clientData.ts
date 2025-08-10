@@ -1,4 +1,4 @@
-import { loadObjectStoreIntoJson, openDb, saveJsonAsObjectStore } from "@common/serialization/dbUtils";
+import { loadObjectStoreIntoJson, openDb, saveJsonAsObjectStore } from "./dbUtils";
 
 export interface AuthenticationOptions {
     token: string;

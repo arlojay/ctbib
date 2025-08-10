@@ -1,33 +1,20 @@
 {
-  "name": "chat-thing-because-im-bored",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
   "scripts": {
     "build-server": "cd server && npm run build",
     "build-client": "cd client && npm run build",
-    "build-common": "tsc -b ./common",
+    "build-common": "cd common && npm run build",
     "build": "npm run build-common && npm run build-server && npm run build-client",
     "start-server": "cd server && npm run run",
     "start": "npm run build && npm run start-server",
     "dev-server": "npm run build-common && npm run build-server && npm run start-server",
     "dev-client": "cd client && npm run build-dev",
-    "install-all": "npm i && cd client && npm i && cd ../server && npm i && cd ../common && npm i"
+    "install-client": "cd client && npm i",
+    "install-server": "cd server && npm i",
+    "install-common": "cd common && npm i",
+    "install-all": "npm i && npm run intall-common && npm run install-client && npm run install-server"
   },
-  "keywords": [],
-  "author": "arlojay",
-  "license": "ISC",
-  "type": "module",
   "devDependencies": {
-    "@types/node": "^24.1.0",
-    "copy-webpack-plugin": "^13.0.0",
-    "ts-loader": "^9.5.2",
-    "tsconfig-paths-webpack-plugin": "^4.2.0",
-    "typescript": "^5.9.2",
-    "webpack": "^5.101.0",
-    "webpack-cli": "^6.0.1"
-  },
-  "dependencies": {
-    "tiny-typed-emitter": "^2.1.0"
+    "tsc": "^2.0.4",
+    "typescript": "^5.9.2"
   }
 }
