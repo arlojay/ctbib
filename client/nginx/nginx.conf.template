@@ -4,8 +4,8 @@ http {
         listen 80;
         listen 443 ssl;
         server_name ${WEBSERVER_DOMAIN};
-        ssl_certificate /etc/letsencrypt/cert.pem;
-        ssl_certificate_key /etc/letsencrypt/privkey.pem;
+        ssl_certificate ${CERTIFICATE_DIR}/cert.pem;
+        ssl_certificate_key ${CERTIFICATE_DIR}/privkey.pem;
         include /etc/nginx/mime.types;
 
         location /* {

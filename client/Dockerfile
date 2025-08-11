@@ -14,4 +14,4 @@ COPY --from=builder /ctbib/client/nginx/ /etc/nginx
 
 VOLUME /etc/letsencrypt
 
-CMD envsubst '$WEBSERVER_DOMAIN $API_ENDPOINT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && ls -l /etc/letsencrypt && nginx -g 'daemon off;'
+CMD envsubst '$CERTIFICATE_DIR $WEBSERVER_DOMAIN $API_ENDPOINT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'
