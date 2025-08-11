@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { Server } from "./server";
 import { ChatManager } from "./manager";
+import { AccountManager } from "../accounts";
 
 export interface SerializedChannel {
     _id: ObjectId;
@@ -23,9 +24,9 @@ export class Channel {
             name: this.name
         }
     }
-    public async deserialize(data: SerializedChannel, chatManager: ChatManager) {
+    public async deserialize(data: SerializedChannel, accountManager: AccountManager, chatManager: ChatManager) {
         this.uuid = data._id;
-        this.server = await chatManager.getServer(data.server);
+        this.server = await chatManager.getServer(data.server, accountManager);
         this.name = data.name;
     }
 }

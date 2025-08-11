@@ -37,9 +37,9 @@ export class ChatManager {
         if(this.messages.has(cacheKey)) return this.messages.get(cacheKey);
 
         const messageDocument = await this.mongo
-            .db(serverUUID.toHexString())
-            .collection("channel-" + channelUUID.toHexString())
-            .findOne({ _id: uuid }) as SerializedMessage;
+            .db("messages")
+            .collection(serverUUID.toHexString())
+            .findOne({ _id: uuid, channel: channelUUID }) as SerializedMessage;
         
         const message = new Message;
         message.setUUID(uuid);
@@ -54,6 +54,9 @@ export class ChatManager {
     public async getMessages(from: ObjectId, channelUUID: ObjectId, serverUUID: ObjectId, count: number, accountManager: AccountManager): Promise<Message[]> {
         const pipeline: Document[] = [
             {
+                $match: { channel: channelUUID }
+            },
+            {
                 $sort: { creationDate: -1 }
             },
             {
@@ -65,14 +68,14 @@ export class ChatManager {
             const fromMessage = await this.getMessage(from, channelUUID, serverUUID, accountManager);
             if(fromMessage == null) return [];
             
-            pipeline.unshift({
+            pipeline.unshift(pipeline.shift(), {
                 $match: { creationDate: { $lt: fromMessage.creationDate.toISOString() } }
             });
         }
 
         const messageDocuments = await this.mongo
-            .db(serverUUID.toHexString())
-            .collection("channel-" + channelUUID.toHexString())
+            .db("messages")
+            .collection(serverUUID.toHexString())
             .aggregate(pipeline)
             .toArray() as SerializedMessage[];
 
@@ -82,7 +85,7 @@ export class ChatManager {
             const message = new Message;
             message.setUUID(messageDocument._id);
             message.author = await accountManager.findByUUID(messageDocument.author);
-            message.channel = await this.getChannel(messageDocument.channel, messageDocument.server);
+            message.channel = await this.getChannel(messageDocument.channel, messageDocument.server, accountManager);
             message.creationDate.setTime(messageDocument.creationDate.getTime());
             message.content = messageDocument.content;
             
@@ -92,30 +95,30 @@ export class ChatManager {
 
         return messages;
     }
-    public async getChannel(uuid: ObjectId, serverUUID: ObjectId) {
+    public async getChannel(uuid: ObjectId, serverUUID: ObjectId, accountManager: AccountManager) {
         const cacheKey = channelCacheKey(uuid, serverUUID);
         if(this.channels.has(cacheKey)) return this.channels.get(cacheKey);
 
         const channelDocument = await this.mongo
-            .db(serverUUID.toHexString())
-            .collection("channels")
+            .db("channels")
+            .collection(serverUUID.toHexString())
             .findOne({ _id: uuid }) as SerializedChannel;
         
         const channel = new Channel;
         channel.setUUID(uuid);
-        channel.server = await this.getServer(serverUUID);
+        channel.server = await this.getServer(serverUUID, accountManager);
         channel.name = channelDocument.name;
 
         this.channels.set(cacheKey, channel);
 
         return channel;
     }
-    public async getServer(uuid: ObjectId) {
+    public async getServer(uuid: ObjectId, accountManager: AccountManager) {
         if(this.servers.has(uuid.toHexString())) return this.servers.get(uuid.toHexString());
 
         const dbServer = await this.mongo
-            .db(uuid.toHexString())
-            .collection("data")
+            .db("chat")
+            .collection("servers")
             .findOne({ _id: uuid }) as SerializedServer;
 
         if(dbServer == null) return null;
@@ -123,14 +126,14 @@ export class ChatManager {
         const server = new Server;
         this.servers.set(uuid.toHexString(), server);
 
-        await server.deserialize(dbServer, this);
+        await server.deserialize(dbServer, accountManager, this);
 
         return server;
     }
     public async createMessage(message: Message) {
         const messageDocument = await this.mongo
-            .db(message.channel.server.uuid.toHexString())
-            .collection("channel-" + message.channel.uuid)
+            .db("messages")
+            .collection(message.channel.server.uuid.toHexString())
             .insertOne(message.serialize());
         
         message.setUUID(messageDocument.insertedId);
@@ -139,8 +142,8 @@ export class ChatManager {
     }
     public async createChannel(channel: Channel) {
         const channelDocument = await this.mongo
-            .db(channel.server.uuid.toHexString())
-            .collection("channels")
+            .db("channels")
+            .collection(channel.server.uuid.toHexString())
             .insertOne(channel.serialize());
         
         channel.setUUID(channelDocument.insertedId);
@@ -151,8 +154,8 @@ export class ChatManager {
         server.setUUID(new ObjectId);
 
         const serverDocument = await this.mongo
-            .db(server.uuid.toHexString())
-            .collection("data")
+            .db("chat")
+            .collection("servers")
             .insertOne(server.serialize());
         
         server.setUUID(serverDocument.insertedId);
@@ -160,6 +163,6 @@ export class ChatManager {
         return server;
     }
     public async updateServer(server: Server) {
-        await this.mongo.db(server.uuid.toHexString()).collection("data").replaceOne({ _id: server.uuid }, server.serialize());
+        await this.mongo.db("chat").collection("servers").replaceOne({ _id: server.uuid }, server.serialize());
     }
 }

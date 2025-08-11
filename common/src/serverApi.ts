@@ -74,3 +74,11 @@ export interface GetServerResponse {
     name: string;
     channels: string[];
 }
+export interface CreateServerRequest {
+    name: string;
+}
+export interface CreateServerResponse {
+    uuid: string;
+    name: string;
+    channels: string[];
+}

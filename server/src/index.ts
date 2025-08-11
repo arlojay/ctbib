@@ -8,7 +8,7 @@ import { Router, WebSocketExpress } from "websocket-express";
 import { UserSocketSession } from "./user/userSocketSession";
 import { MessagePacket } from "@common/packet";
 import { ObjectId } from "mongodb";
-import { ChatManager, Message } from "./chat";
+import { Channel, ChatManager, Message, Server } from "./chat";
 import { createServer } from "node:https";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
@@ -20,19 +20,6 @@ main();
 
 async function main() {
     await initMongo();
-
-    // const server = new Server;
-    // server.name = "Main Server";
-    // await chatManager.createServer(server);
-
-    // const channel = new Channel;
-    // channel.name = "Main Channel";
-    // channel.server = server;
-    // await chatManager.createChannel(channel);
-
-    // server.addChannel(channel);
-    // await chatManager.updateServer(server);
-
     await initExpress();
 }
 
@@ -176,7 +163,7 @@ async function initExpress() {
             return res.status(400).send({ error: "Malformed request" });
         }
 
-        const channel = await chatManager.getChannel(ObjectId.createFromHexString(channelUUID), ObjectId.createFromHexString(serverUUID));
+        const channel = await chatManager.getChannel(ObjectId.createFromHexString(channelUUID), ObjectId.createFromHexString(serverUUID), accountManager);
 
         if(channel == null) {
             return res.status(404).send({ error: "Channel not found" });
@@ -261,7 +248,8 @@ async function initExpress() {
 
         const channel = await chatManager.getChannel(
             ObjectId.createFromHexString(uuid),
-            ObjectId.createFromHexString(server)
+            ObjectId.createFromHexString(server),
+            accountManager
         );
 
         if(channel == null) {
@@ -278,7 +266,8 @@ async function initExpress() {
         const { uuid } = req.query as any as ServerApi.GetServerRequest;
 
         const server = await chatManager.getServer(
-            ObjectId.createFromHexString(uuid)
+            ObjectId.createFromHexString(uuid),
+            accountManager
         );
 
         if(server == null) {

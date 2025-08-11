@@ -35,7 +35,7 @@ export class Message {
     public async deserialize(data: SerializedMessage, chatManager: ChatManager, accountManager: AccountManager) {
         this.uuid = data._id;
         this.author = await accountManager.findByUUID(data.author);
-        this.channel = await chatManager.getChannel(data.channel, data.server);
+        this.channel = await chatManager.getChannel(data.channel, data.server, accountManager);
         this.content = data.content;
         this.creationDate.setTime(data.creationDate.getTime());
     }
