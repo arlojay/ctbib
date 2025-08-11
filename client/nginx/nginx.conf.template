@@ -1,11 +1,11 @@
 events {}
 http {
     server {
-        listen ${HTTP_PORT};
-        listen ${HTTPS_PORT} ssl;
+        listen 80;
+        listen 443 ssl;
         server_name ${WEBSERVER_DOMAIN};
-        ssl_certificate ${CERTIFICATES_DIR}/cert.pem;
-        ssl_certificate_key ${CERTIFICATES_DIR}/privkey.pem;
+        ssl_certificate /etc/letsencrypt/cert.pem;
+        ssl_certificate_key /etc/letsencrypt/privkey.pem;
         include /etc/nginx/mime.types;
 
         location /* {

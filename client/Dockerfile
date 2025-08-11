@@ -13,10 +13,5 @@ COPY --from=builder /ctbib/client/dist/ /etc/nginx/html
 COPY --from=builder /ctbib/client/nginx/ /etc/nginx
 
 VOLUME /etc/letsencrypt
-ENV HTTP_PORT=80
-ENV HTTPS_PORT=443
-ENV WEBSERVER_DOMAIN=example.com
-ENV CERTIFICATES_DIR=/etc/letsencrypt
-ENV API_ENDPOINT=http://api-container:80
 
-CMD envsubst '$HTTP_PORT $HTTPS_PORT $WEBSERVER_DOMAIN $CERTIFICATES_DIR $API_ENDPOINT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'
+CMD envsubst '$WEBSERVER_DOMAIN $API_ENDPOINT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && ls -l /etc/letsencrypt && nginx -g 'daemon off;'
