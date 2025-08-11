@@ -30,6 +30,8 @@ async function main() {
     mainUI.loginScreen.appendChild(createRegisterPrompt(onSessionStart));
 
     clientEvents.once("login", async (whoami) => {
+        await clientCache.setSelfUser(whoami);
+
         ServerApi.setToken(clientData.authentication.token);
 
         mainUI.loginScreen.hidden = true;
@@ -70,45 +72,81 @@ function openServerList(whoami: WhoamiResponse) {
     });
     events.on("open", server => {
         openChannelList(server);
+        events.emit("select-server", server);
+    });
+    events.on("create-server", async () => {
+        const serverName = prompt("Enter server name:");
+        if(serverName == null) return;
+
+        const serverData = await ServerApi.createServer({ name: serverName });
+        const server = await clientCache.getServer(serverData.uuid);
+        events.emit("add-server", server);
     });
     const serverList = createServerList(events);
     mainUI.serverList.replaceWith(serverList);
+    mainUI.serverList = serverList;
 }
 
 function openChannelList(server: Server) {
     const events = new ChannelListEvents;
+    chatClient.on("channel-create", async binaryChannel => {
+        const channel = await clientCache.addChannel(binaryChannel);
+        events.emit("add-channel", channel);
+    })
     events.on("fetch", () => {
         events.emit("load", server.channels);
     })
     events.on("open", channel => {
         openChatScreen(channel);
+        events.emit("select-channel", channel);
     });
-    const channelList = createChannelList(server, events);
+    events.on("create-channel", async () => {
+        const channelName = prompt("Enter channel name:");
+        if(channelName == null) return;
+
+        const channelData = await ServerApi.createChannel({ name: channelName, server: server.uuid });
+        const channel = await clientCache.addChannel(channelData);
+        events.emit("add-channel", channel);
+    });
+    console.log(server, clientCache.getSelfUser());
+    const channelList = createChannelList(events, {
+        serverName: server.name,
+        canModifyChannels: server.owner?.uuid == clientCache.getSelfUser().uuid
+    });
     mainUI.channelList.replaceWith(channelList);
+    mainUI.channelList = channelList;
+    
+    const firstChannel = server.channels[0];
+    openChatScreen(firstChannel);
+    if(firstChannel != null) events.emit("select-channel", firstChannel);
 }
 
 function openChatScreen(channel: Channel) {
-    const chatEvents = new ChatScreenEvents;
+    const events = new ChatScreenEvents;
 
-    chatClient.addListener("message", async binaryMessage => {
+    chatClient.on("message", async binaryMessage => {
         const message = await clientCache.addMessage(binaryMessage);
-        chatEvents.emit("receive", message);
-    })
+        events.emit("receive", message);
+    });
 
-    chatEvents.on("send", async message => {
+    events.on("send", async message => {
         await ServerApi.sendMessage({ content: message, channel: channel.uuid, server: channel.server.uuid });
     });
-    chatEvents.on("fetch", async (fromMessage, count) => {
+    events.on("fetch", async (fromMessage, count) => {
         const response = await ServerApi.fetchMessages({ from: fromMessage, channel: channel.uuid, server: channel.server.uuid, count });
 
         for(const jsonMessage of response.messages) {
             const message = await clientCache.addMessage(jsonMessage);
-            chatEvents.emit("load", message);
+            events.emit("load", message);
         }
     });
     
-    const chatScreen = createChatScreen(chatEvents);
+    const chatScreen = createChatScreen(events, {
+        channelName: channel?.name,
+        exists: channel != null
+    });
     mainUI.chatScreen.replaceWith(chatScreen);
+    mainUI.chatScreen = chatScreen;
 }
 
 async function onSessionStart(response: SessionStartResponse) {

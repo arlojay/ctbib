@@ -29,7 +29,7 @@ export class Server {
         return {
             _id: this.uuid,
             name: this.name,
-            owner: this.owner.uuid,
+            owner: this.owner?.uuid,
             channels: this.channels.values().map(channel => channel.uuid).toArray()
         }
     }

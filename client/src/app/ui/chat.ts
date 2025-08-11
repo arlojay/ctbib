@@ -1,5 +1,6 @@
 import { TypedEmitter } from "tiny-typed-emitter";
 import { Message } from "../chat/message";
+import { Channel } from "../chat";
 
 export class ChatScreenEvents extends TypedEmitter<{
     "send": (message: string) => void;
@@ -104,7 +105,12 @@ function createChatMessage(message: Message, mergeBefore: HTMLDivElement, assimi
     }
 }
 
-export function createChatScreen(events: ChatScreenEvents) {
+interface ChatChannelOptions {
+    channelName: string;
+    exists: boolean;
+}
+
+export function createChatScreen(events: ChatScreenEvents, options: ChatChannelOptions) {
     const root = document.createElement("div");
     root.classList.add("chat");
 
@@ -157,33 +163,50 @@ export function createChatScreen(events: ChatScreenEvents) {
     events.on("receive", addMessage);
     events.on("load", addMessage);
 
+    if(options.exists) {
+        const inputContainer = document.createElement("div");
+        inputContainer.classList.add("input");
 
-    const inputContainer = document.createElement("div");
-    inputContainer.classList.add("input");
+        const inputForm = document.createElement("form");
+        inputForm.addEventListener("submit", event => {
+            event.preventDefault();
+            const content = messageField.value;
+            messageField.value = "";
 
-    const inputForm = document.createElement("form");
-    inputForm.addEventListener("submit", event => {
-        event.preventDefault();
-        const content = messageField.value;
-        messageField.value = "";
+            if(content.replace(/[\s\t\r\n]/g, "").length == 0) return;
+            events.emit("send", content);
+        })
 
-        if(content.replace(/[\s\t\r\n]/g, "").length == 0) return;
-        events.emit("send", content);
-    })
+        const messageField = document.createElement("input");
+        messageField.type = "text";
 
-    const messageField = document.createElement("input");
-    messageField.type = "text";
+        const submitButton = document.createElement("input");
+        submitButton.type = "submit";
+        submitButton.value = "Send";
 
-    const submitButton = document.createElement("input");
-    submitButton.type = "submit";
-    submitButton.value = "Send";
+        inputForm.append(messageField, submitButton);
+        inputContainer.append(inputForm);
+    
 
-    inputForm.append(messageField, submitButton);
-    inputContainer.append(inputForm);
+        const channelTitlebar = document.createElement("div");
+        channelTitlebar.classList.add("titlebar");
+
+        const channelName = document.createElement("span")
+        channelName.classList.add("name");
+        channelName.textContent = options.channelName;
+
+        channelTitlebar.append(channelName);
 
 
-    root.append(logs, inputContainer);
-    events.emit("fetch", null, 50);
+        root.append(channelTitlebar, logs, inputContainer);
+        events.emit("fetch", null, 50);
+    } else {
+        const noChannelsModal = document.createElement("div");
+        noChannelsModal.classList.add("no-channels-modal");
+        noChannelsModal.textContent = "No channels!";
+
+        root.append(noChannelsModal);
+    }
 
     return root;
 }

@@ -1,7 +1,7 @@
-import { BinaryMessage } from "@common/chatbin";
+import { BinaryChannel, BinaryMessage } from "@common/chatbin";
 import * as ServerApi from "./serverApi";
 import { User, Message, Channel, Server } from "./chat";
-import { JsonMessage } from "@common/serverApi";
+import { GetChannelResponse, JsonChannel, JsonMessage, WhoamiResponse } from "@common/serverApi";
 
 function messageCacheKey(messageUUID: string, channelUUID: string, serverUUID: string) {
     return messageUUID + "." + channelUUID + "." + serverUUID;
@@ -15,6 +15,19 @@ export const clientCache = new class ClientCache {
     private readonly channels: Map<string, Channel> = new Map;
     private readonly servers: Map<string, Server> = new Map;
     private readonly users: Map<string, User> = new Map;
+    private selfUser: User;
+    private whoami: WhoamiResponse;
+
+    public async setSelfUser(whoami: WhoamiResponse) {
+        this.whoami = whoami;
+        this.selfUser = await this.getUser(whoami.uuid);
+    }
+    public getWhoami() {
+        return this.whoami;
+    }
+    public getSelfUser() {
+        return this.selfUser;
+    }
 
     public async getUser(uuid: string) {
         if(this.users.has(uuid)) return this.users.get(uuid);
@@ -56,8 +69,9 @@ export const clientCache = new class ClientCache {
         if(this.servers.has(uuid)) return this.servers.get(uuid);
 
         const serverInfo = await ServerApi.serverInfo({ uuid });
+        const owner = await this.getUser(serverInfo.owner).catch(() => null);
 
-        const server = new Server(serverInfo.uuid, serverInfo.name);
+        const server = new Server(serverInfo.uuid, serverInfo.name, owner);
         this.servers.set(serverInfo.uuid, server);
 
         for await(const channel of serverInfo.channels) {
@@ -66,19 +80,27 @@ export const clientCache = new class ClientCache {
 
         return server;
     }
-    public async addMessage(binaryMessage: BinaryMessage): Promise<Message>;
-    public async addMessage(jsonMessage: JsonMessage): Promise<Message>;
-    public async addMessage(messageSource: BinaryMessage | JsonMessage): Promise<Message> {
-        const author = await this.getUser(messageSource.author);
-        const channel = await this.getChannel(messageSource.channel, messageSource.server);
+    public async addMessage(messageData: BinaryMessage | JsonMessage): Promise<Message> {
+        const author = await this.getUser(messageData.author);
+        const channel = await this.getChannel(messageData.channel, messageData.server);
         let message: Message;
 
-        if(messageSource instanceof BinaryMessage) {
-            message = new Message(messageSource.uuid, author, channel, messageSource.content, messageSource.creationDate);
+        if(messageData instanceof BinaryMessage) {
+            message = new Message(messageData.uuid, author, channel, messageData.content, messageData.creationDate);
         } else {
-            message = new Message(messageSource.uuid, author, channel, messageSource.content, new Date(messageSource.creationDate));
+            message = new Message(messageData.uuid, author, channel, messageData.content, new Date(messageData.creationDate));
         }
-        this.messages.set(messageSource.uuid, message);
+        this.messages.set(messageData.uuid, message);
         return message;
+    }
+    public async addChannel(channelData: BinaryChannel | JsonChannel) {
+        const server = await this.getServer(channelData.server);
+
+        const cacheKey = channelCacheKey(channelData.uuid, channelData.server);
+        const channel = new Channel(channelData.uuid, channelData.name);
+        server.addChannel(channel);
+        
+        this.channels.set(cacheKey, channel);
+        return channel;
     }
 }

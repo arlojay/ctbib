@@ -35,6 +35,8 @@ export class AccountManager {
     }
 
     public async findByUUID(uuid: ObjectId) {
+        if(uuid == null) return null;
+
         if(this.accounts.has(uuid.toHexString())) return this.accounts.get(uuid.toHexString());
         const dbAccount = await this.db.collection("accounts").findOne<SerializedAccount>({ _id: uuid });
 

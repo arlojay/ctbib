@@ -4,7 +4,6 @@ import { BinaryBuffer } from "@common/serialization/binaryBuffer";
 import { ExtendedWebSocket } from "websocket-express";
 
 export class UserSocketSession extends TypedEmitter<{
-    "message": (message: string) => void;
     "close": () => void;
 }> {
     public open = true;

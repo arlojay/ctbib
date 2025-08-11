@@ -39,6 +39,8 @@ export interface JsonMessage {
 }
 export interface JsonChannel {
     uuid: string;
+    name: string;
+    server: string;
 }
 export interface GetMessageRequest {
     uuid: string;
@@ -72,6 +74,7 @@ export interface GetServerRequest {
 export interface GetServerResponse {
     uuid: string;
     name: string;
+    owner: string;
     channels: string[];
 }
 export interface CreateServerRequest {
@@ -80,5 +83,13 @@ export interface CreateServerRequest {
 export interface CreateServerResponse {
     uuid: string;
     name: string;
-    channels: string[];
+}
+export interface CreateChannelRequest {
+    name: string;
+    server: string;
+}
+export interface CreateChannelResponse {
+    uuid: string;
+    server: string;
+    name: string;
 }

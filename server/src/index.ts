@@ -65,7 +65,7 @@ async function initExpress() {
             res.send({ sessionToken });
             
             const account = accountManager.findBySessionToken(sessionToken);
-            account.lastLoginDate.setDate(Date.now());
+            account.lastLoginDate.setTime(Date.now());
             await accountManager.updateAccount(account);
         } catch(e) {
             while(e.cause != null) e = e.cause;
@@ -277,9 +277,50 @@ async function initExpress() {
         res.status(200).send({
             uuid: server.uuid.toHexString(),
             name: server.name,
-            channels: server.channels.keys().toArray()
+            channels: server.channels.keys().toArray(),
+            owner: server.owner?.uuid.toHexString()
         } as ServerApi.GetServerResponse);
     });
+    api.post("/create-server", async (req, res) => {
+        const { name } = req.body as any as ServerApi.CreateServerRequest;
+        const account: Account = res.locals.account;
+
+        if(typeof name != "string") return res.status(400).send({ error: "Malformed request" });
+
+        const server = new Server;
+        server.name = name;
+        server.owner = account;
+        await chatManager.createServer(server);
+
+        account.servers.push(server.uuid);
+        await accountManager.updateAccount(account);
+
+        res.status(200).send({
+            name,
+            uuid: server.uuid.toHexString()
+        } as ServerApi.CreateServerResponse);
+    });
+    api.post("/create-channel", async (req, res) => {
+        const { name, server: serverUUID } = req.body as any as ServerApi.CreateChannelRequest;
+        const account: Account = res.locals.account;
+
+        const server = await chatManager.getServer(ObjectId.createFromHexString(serverUUID), accountManager);
+        if(account != server.owner) return res.status(403).send({ error: "Forbidden" });
+
+        const channel = new Channel;
+        channel.name = name;
+        channel.server = server;
+        await chatManager.createChannel(channel);
+
+        server.addChannel(channel);
+        await chatManager.updateServer(server);
+        
+        return res.status(200).send({
+            uuid: channel.uuid.toHexString(),
+            server: serverUUID,
+            name
+        } as ServerApi.CreateChannelResponse)
+    })
     api.use((req, res) => {
         res.status(404).send({ error: "Not found" });
     });

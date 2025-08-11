@@ -1,4 +1,4 @@
-import { GetMessagesRequest, GetMessagesResponse, GetMessageRequest, GetMessageResponse, GetUserRequest, GetUserResponse, LoginCredentials, RegisterCredentials, SendMessageRequest, SendMessageResponse, SessionStartResponse, WhoamiResponse, GetChannelRequest, GetChannelResponse, GetServerRequest, GetServerResponse } from "@common/serverApi";
+import { GetMessagesRequest, GetMessagesResponse, GetMessageRequest, GetMessageResponse, GetUserRequest, GetUserResponse, LoginCredentials, RegisterCredentials, SendMessageRequest, SendMessageResponse, SessionStartResponse, WhoamiResponse, GetChannelRequest, GetChannelResponse, GetServerRequest, GetServerResponse, CreateServerRequest, CreateChannelRequest, CreateServerResponse, CreateChannelResponse } from "@common/serverApi";
 import path from "path";
 
 export const serverEndpoint = document.location.protocol + "//" + document.location.host;
@@ -73,4 +73,10 @@ export async function channelInfo(query: GetChannelRequest) {
 }
 export async function serverInfo(query: GetServerRequest) {
     return await request("server", "GET", query, token) as GetServerResponse;
+}
+export async function createServer(server: CreateServerRequest) {
+    return await request("create-server", "POST", server, token) as CreateServerResponse;
+}
+export async function createChannel(channel: CreateChannelRequest) {
+    return await request("create-channel", "POST", channel, token) as CreateChannelResponse;
 }
