@@ -4,6 +4,7 @@
     "outDir": "./dist",
 
     "lib": ["esnext", "es2022", "dom"],
+    "types": ["node"],
 
     "module": "esnext",
     "moduleResolution": "bundler",
