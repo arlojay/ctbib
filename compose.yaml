@@ -1,0 +1,57 @@
+services:
+  database:
+    image: mongo
+    ports:
+      - "55000:27017"
+    volumes:
+      - db-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    networks:
+      - backend
+
+  api:
+    image: ctbib/server
+    secrets:
+      - accounts_cluster_uri
+      - chat_cluster_uri
+    environment:
+      USE_TLS: false
+    networks:
+      - backend
+
+  webserver:
+    image: ctbib/client
+    ports:
+      - "${HTTP_PORT}:80"
+      - "${HTTPS_PORT}:443"
+    secrets:
+      - tls_certificate
+      - tls_privkey
+    environment:
+      TLS_CERTIFICATE: /run/secrets/tls_certificate
+      TLS_PRIVATE_KEY: /run/secrets/tls_privkey
+      API_ENDPOINT: http://api:80
+      WEBSERVER_DOMAIN: ${WEBSERVER_DOMAIN}
+    networks:
+      - backend
+      - frontend
+
+volumes:
+  db-data:
+
+secrets:
+  tls_certificate:
+    file: ${CERTIFICATE_ROOT}/cert.pem
+  tls_privkey:
+    file: ${CERTIFICATE_ROOT}/privkey.pem
+  accounts_cluster_uri:
+    file: ./secrets/accounts_cluster_uri
+  chat_cluster_uri:
+    file: ./secrets/chat_cluster_uri
+    
+
+networks:
+  backend: {}
+  frontend: {}

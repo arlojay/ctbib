@@ -19,8 +19,8 @@ export class ChatManager {
     private channels: Map<string, Channel> = new Map;
     private messages: Map<string, Message> = new Map;
 
-    public constructor() {
-        this.mongo = new MongoClient(process.env.ACCOUNTS_CLUSTER_URI, {
+    public constructor(uri: string) {
+        this.mongo = new MongoClient(uri, {
             serverApi: {
                 version: ServerApiVersion.v1,
                 strict: true,

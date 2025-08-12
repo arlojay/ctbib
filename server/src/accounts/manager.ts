@@ -9,8 +9,8 @@ export class AccountManager {
     private accounts: Map<string, Account> = new Map;
     private sessions: Map<string, Account> = new Map;
 
-    public constructor() {
-        this.mongo = new MongoClient(process.env.CHAT_CLUSTER_URI, {
+    public constructor(uri: string) {
+        this.mongo = new MongoClient(uri, {
             serverApi: {
                 version: ServerApiVersion.v1,
                 strict: true,

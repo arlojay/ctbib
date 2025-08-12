@@ -175,7 +175,7 @@ async function initExpress() {
 
         let trimmedContent = content;
         try {
-            trimmedContent = validateMessage(content);
+            trimmedContent = validateMessage(trimmedContent);
         } catch(e) {
             return res.status(400).send({ error: "Invalid message" });
         }
@@ -522,9 +522,11 @@ function getSSLCertificates(directory: string) {
     return null;
 }
 async function initMongo() {
-    accountManager = new AccountManager;
+    const accountsClusterURI = process.env.ACCOUNTS_CLUSTER_URI ?? readFileSync("/run/secrets/accounts_cluster_uri").toString();
+    console.log(accountsClusterURI);
+    accountManager = new AccountManager(accountsClusterURI);
     await accountManager.connect();
     
-    chatManager = new ChatManager;
+    chatManager = new ChatManager(process.env.CHAT_CLUSTER_URI ?? readFileSync("/run/secrets/chat_cluster_uri").toString());
     await chatManager.connect();
 }

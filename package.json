@@ -11,7 +11,12 @@
     "install-client": "cd client && npm i",
     "install-server": "cd server && npm i",
     "install-common": "cd common && npm i",
-    "install-all": "npm i && npm run intall-common && npm run install-client && npm run install-server"
+    "install-all": "npm i && npm run intall-common && npm run install-client && npm run install-server",
+    "docker-build-client": "docker build -t ctbib/client -f client/Dockerfile .",
+    "docker-build-server": "docker build -t ctbib/server -f server/Dockerfile .",
+    "docker-build": "npm run docker-build-client && npm run docker-build-server",
+    "docker-build-nocache": "npm run docker-build-client --no-cache && npm run docker-build-server --no-cache",
+    "compose": "npm run docker-build && node generate-secrets.js"
   },
   "devDependencies": {
     "tsc": "^2.0.4",

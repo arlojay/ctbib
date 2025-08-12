@@ -13,5 +13,7 @@ COPY --from=builder /ctbib/client/dist/ /etc/nginx/html
 COPY --from=builder /ctbib/client/nginx/ /etc/nginx
 
 VOLUME /etc/letsencrypt
+EXPOSE 80
+EXPOSE 443
 
-CMD envsubst '$CERTIFICATE_DIR $WEBSERVER_DOMAIN $API_ENDPOINT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'
+CMD envsubst '$TLS_CERTIFICATE $TLS_PRIVATE_KEY $WEBSERVER_DOMAIN $API_ENDPOINT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'
