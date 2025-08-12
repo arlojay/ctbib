@@ -48,6 +48,22 @@ async function main() {
     } else {
         mainUI.loginScreen.hidden = false;
     }
+
+    chatClient.addListener("disconnected", () => {
+        setTimeout(() => {
+            chatClient.connect(clientData.authentication.token);
+            openServerList(clientCache.getWhoami());
+            openChannelList(null);
+            openChatScreen(null);
+            openMembersList(null);
+        }, 2000);
+    });
+    chatClient.addListener("auth-invalid", () => {
+        console.trace("Authentication expired");
+        if(confirm("Your authentication has expired. Confirm tab reload.")) {
+            document.location.reload();
+        }
+    })
 }
 
 async function tryAuth() {
@@ -132,12 +148,17 @@ function openMembersList(server: Server) {
         console.log("Created invite " + response.code);
         alert("Created invite (only shown once!)\n" + response.code);
     });
-    const membersList = createMembersListScreen(events, {
-        serverOwner: server.owner?.uuid,
-        canInviteUsers: clientCache.getSelfUser().uuid == server.owner?.uuid
-    });
-    mainUI.membersList.replaceWith(membersList)
-    mainUI.membersList = membersList;
+    if(server != null) {
+        const membersList = createMembersListScreen(events, {
+            serverOwner: server.owner?.uuid,
+            canInviteUsers: clientCache.getSelfUser().uuid == server.owner?.uuid
+        });
+
+        mainUI.membersList.replaceWith(membersList)
+        mainUI.membersList = membersList;
+    } else {
+        mainUI.membersList.replaceChildren();
+    }
 }
 
 function openChannelList(server: Server) {
@@ -172,22 +193,25 @@ function openChannelList(server: Server) {
             }
         }
     });
-    console.log(server, clientCache.getSelfUser());
-    const channelList = createChannelList(events, {
-        serverName: server.name,
-        canModifyChannels: server.owner?.uuid == clientCache.getSelfUser().uuid
-    });
-    mainUI.channelList.replaceWith(channelList);
-    mainUI.channelList = channelList;
     
-    const firstChannel = server.channels[0];
-    openChatScreen(firstChannel);
-    if(firstChannel != null) events.emit("select-channel", firstChannel);
+    if(server != null) {
+        const channelList = createChannelList(events, {
+            serverName: server.name,
+            canModifyChannels: server.owner?.uuid == clientCache.getSelfUser().uuid
+        });
+        mainUI.channelList.replaceWith(channelList);
+        mainUI.channelList = channelList;
+        
+        const firstChannel = server.channels[0];
+        openChatScreen(firstChannel);
+        if(firstChannel != null) events.emit("select-channel", firstChannel);
+    } else {
+        mainUI.channelList.replaceChildren();
+    }
 }
 
 function openChatScreen(channel: Channel) {
     const events = new ChatScreenEvents;
-
     
     chatClient.on("message", async binaryMessage => {
         if(channel == null) return;

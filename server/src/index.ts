@@ -6,7 +6,7 @@ import { Account, AccountManager } from "./accounts";
 import { IncomingHttpHeaders } from "node:http";
 import { Router, WebSocketExpress } from "websocket-express";
 import { UserSocketSession } from "./user/userSocketSession";
-import { ChannelPacket, MessagePacket, UserJoinPacket } from "@common/packet";
+import { AuthorizationStatePacket, ChannelPacket, MessagePacket, UserJoinPacket } from "@common/packet";
 import { ObjectId } from "mongodb";
 import { Channel, ChatManager, Message, Server } from "./chat";
 import { createServer } from "node:https";
@@ -105,17 +105,25 @@ async function initExpress() {
         if(typeof token != "string") return res.status(403).send("Unauthorized");
 
         const account = accountManager.findBySessionToken(token);
-        if(account == null) {
-            res.status(400).send("Invalid session");
-            return;
-        }
-
         const socket = new UserSocketSession(await res.accept());
-        const socketList = sessionSocketLists.get(token) ?? new Set;
 
-        socket.once("close", () => socketList.delete(socket));
-        socketList.add(socket);
-        sessionSocketLists.set(token, socketList);
+        const authPacket = new AuthorizationStatePacket;
+        if(account == null) {
+            authPacket.success = false;
+            authPacket.error = "Forbidden";
+
+            setTimeout(() => {
+                socket.ws.close();
+            }, 5000);
+        } else {
+            authPacket.success = true;
+            const socketList = sessionSocketLists.get(token) ?? new Set;
+            
+            socket.once("close", () => socketList.delete(socket));
+            socketList.add(socket);
+            sessionSocketLists.set(token, socketList);
+        }
+        socket.send(authPacket);
     });
     api.use((req, res, next) => {
         const token = getBearerToken(req.headers);
@@ -194,9 +202,10 @@ async function initExpress() {
         res.status(200).send({ uuid: packet.message.uuid } as ServerApi.SendMessageResponse);
 
         sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
-            const account = accountManager.findBySessionToken(sessionToken);
+            const socketAccount = accountManager.findBySessionToken(sessionToken);
+            if(socketAccount == account) return;
 
-            if(!account.servers.some(uuid => uuid.toHexString() == channel.server.uuid.toHexString())) return;
+            if(!socketAccount.servers.some(uuid => uuid.toHexString() == channel.server.uuid.toHexString())) return;
 
             socketList.forEach(socket => {
                 socket.send(packet);
@@ -382,9 +391,10 @@ async function initExpress() {
         packet.channel.server = channel.server.uuid.toHexString();
 
         sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
-            const account = accountManager.findBySessionToken(sessionToken);
+            const socketAccount = accountManager.findBySessionToken(sessionToken);
+            if(socketAccount == account) return;
 
-            if(!account.servers.some(uuid => uuid.toHexString() == channel.server.uuid.toHexString())) return;
+            if(!socketAccount.servers.some(uuid => uuid.toHexString() == channel.server.uuid.toHexString())) return;
             
             socketList.forEach(socket => {
                 socket.send(packet);
@@ -431,19 +441,20 @@ async function initExpress() {
         packet.server = server.uuid.toHexString();
         packet.user.uuid = account.uuid.toHexString();
         packet.user.username = account.username;
+        
+        account.servers.push(server.uuid);
+        await accountManager.updateAccount(account);
 
         sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
-            const account = accountManager.findBySessionToken(sessionToken);
+            const socketAccount = accountManager.findBySessionToken(sessionToken);
+            if(socketAccount == account) return;
 
-            if(!account.servers.some(uuid => uuid.toHexString() == server.uuid.toHexString())) return;
+            if(!socketAccount.servers.some(uuid => uuid.toHexString() == server.uuid.toHexString())) return;
             
             socketList.forEach(socket => {
                 socket.send(packet);
             });
         });
-        
-        account.servers.push(server.uuid);
-        await accountManager.updateAccount(account);
 
         res.status(200).send({
             uuid: server.uuid.toHexString()
