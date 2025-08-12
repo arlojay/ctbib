@@ -415,7 +415,7 @@ async function initExpress() {
 
         const server = await chatManager.getServer(ObjectId.createFromHexString(serverUUID), accountManager);
         if(server == null) return res.status(404).send({ error: "Server not found" });
-        if(account != server.owner) return res.status(403).send({ error: "Forbidden" });
+        if(!account.uuid.equals(server.owner?.uuid)) return res.status(403).send({ error: "Forbidden" });
 
         const invite = await chatManager.createInvite(server, account);
 
