@@ -10,6 +10,7 @@ import { Channel, Server } from "./chat";
 import { createServerListScreen as createServerList, ServerListEvents } from "./ui/serverList";
 import { ChannelListEvents, createChannelListScreen as createChannelList } from "./ui/channelList";
 import { MainUI } from "./ui/mainui";
+import { createMembersListScreen, MemberListEvents } from "./ui/membersList";
 
 const chatClient = new ChatClient;
 const clientData = new ClientData;
@@ -36,7 +37,7 @@ async function main() {
 
         mainUI.loginScreen.hidden = true;
         openServerList(whoami);
-    })
+    });
 
     const whoami = await tryAuth();
 
@@ -73,6 +74,8 @@ function openServerList(whoami: WhoamiResponse) {
     events.on("open", server => {
         openChannelList(server);
         events.emit("select-server", server);
+
+        openMembersList(server);
     });
     events.on("create-server", async () => {
         const serverName = prompt("Enter server name:");
@@ -82,9 +85,44 @@ function openServerList(whoami: WhoamiResponse) {
         const server = await clientCache.getServer(serverData.uuid);
         events.emit("add-server", server);
     });
+    events.on("join-server", async () => {
+        const inviteCode = prompt("Enter invite code:");
+        if(inviteCode == null) return;
+
+        const joinServerResponse = await ServerApi.joinServer({ code: inviteCode });
+        const server = await clientCache.getServer(joinServerResponse.uuid);
+        events.emit("add-server", server);
+        events.emit("select-server", server);
+        openChannelList(server);
+    });
     const serverList = createServerList(events);
     mainUI.serverList.replaceWith(serverList);
     mainUI.serverList = serverList;
+}
+
+function openMembersList(server: Server) {
+    const events = new MemberListEvents;
+    chatClient.on("user-join", async (user, serverUUID) => {
+        if(serverUUID != server.uuid) return;
+        
+        events.emit("add-user", user);
+    })
+    events.on("fetch", async () => {
+        const response = await ServerApi.getMembers({ uuid: server.uuid });
+
+        events.emit("load", response.members);
+    });
+    events.on("create-invite", async () => {
+        const response = await ServerApi.createInvite({ server: server.uuid });
+        console.log("Created invite " + response.code);
+        alert("Created invite (only shown once!)\n" + response.code);
+    });
+    const membersList = createMembersListScreen(events, {
+        serverOwner: server.owner?.uuid,
+        canInviteUsers: clientCache.getSelfUser().uuid == server.owner?.uuid
+    });
+    mainUI.membersList.replaceWith(membersList)
+    mainUI.membersList = membersList;
 }
 
 function openChannelList(server: Server) {
@@ -124,8 +162,12 @@ function openChannelList(server: Server) {
 function openChatScreen(channel: Channel) {
     const events = new ChatScreenEvents;
 
+    
     chatClient.on("message", async binaryMessage => {
+        if(channel == null) return;
+        if(binaryMessage.channel != channel.uuid || binaryMessage.server != channel.server.uuid) return;
         const message = await clientCache.addMessage(binaryMessage);
+
         events.emit("receive", message);
     });
 

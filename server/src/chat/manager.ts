@@ -2,7 +2,8 @@ import { Db, Document, MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import { Channel, SerializedChannel } from "./channel";
 import { Message, SerializedMessage } from "./message";
 import { SerializedServer, Server } from "./server";
-import { AccountManager } from "../accounts";
+import { Account, AccountManager } from "../accounts";
+import { SerializedServerInvite, ServerInvite } from "./serverInvite";
 
 function messageCacheKey(messageUUID: ObjectId, channelUUID: ObjectId, serverUUID: ObjectId) {
     return messageUUID.toHexString() + "." + channelUUID.toHexString() + "." + serverUUID.toHexString();
@@ -164,5 +165,24 @@ export class ChatManager {
     }
     public async updateServer(server: Server) {
         await this.mongo.db("chat").collection("servers").replaceOne({ _id: server.uuid }, server.serialize());
+    }
+    public async createInvite(server: Server, creator: Account) {
+        const invite = new ServerInvite;
+        invite.creator = creator;
+        invite.server = server;
+
+        const inviteDocument = await this.mongo.db("chat").collection("invites").insertOne(invite.serialize());
+        invite.setUUID(inviteDocument.insertedId);
+
+        return invite;
+    }
+    public async getInvite(inviteId: string, accountManager: AccountManager) {
+        const inviteDocument = await this.mongo.db("chat").collection("invites").findOne({ code: inviteId }) as SerializedServerInvite;
+        if(inviteDocument == null) return null;
+
+        const invite = new ServerInvite;
+        invite.deserialize(inviteDocument, accountManager, this);
+
+        return inviteDocument;
     }
 }

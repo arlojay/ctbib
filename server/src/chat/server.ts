@@ -9,12 +9,14 @@ export interface SerializedServer {
     name: string;
     owner: ObjectId;
     channels: ObjectId[];
+    creationDate: Date;
 }
 export class Server {
     public uuid: ObjectId;
     public name: string;
     public owner: Account;
     public channels: Map<string, Channel> = new Map;
+    public creationDate = new Date;
 
     public setUUID(uuid: ObjectId) {
         this.uuid = uuid;
@@ -30,7 +32,8 @@ export class Server {
             _id: this.uuid,
             name: this.name,
             owner: this.owner?.uuid,
-            channels: this.channels.values().map(channel => channel.uuid).toArray()
+            channels: this.channels.values().map(channel => channel.uuid).toArray(),
+            creationDate: this.creationDate
         }
     }
     public async deserialize(data: SerializedServer, accountManager: AccountManager, chatManager: ChatManager) {
@@ -42,5 +45,6 @@ export class Server {
             channel.server = this;
             this.channels.set(uuid.toHexString(), channel);
         }
+        if(data.creationDate != null) this.creationDate.setTime(data.creationDate.getTime());
     }
 }

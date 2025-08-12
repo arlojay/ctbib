@@ -1,4 +1,4 @@
-import { GetMessagesRequest, GetMessagesResponse, GetMessageRequest, GetMessageResponse, GetUserRequest, GetUserResponse, LoginCredentials, RegisterCredentials, SendMessageRequest, SendMessageResponse, SessionStartResponse, WhoamiResponse, GetChannelRequest, GetChannelResponse, GetServerRequest, GetServerResponse, CreateServerRequest, CreateChannelRequest, CreateServerResponse, CreateChannelResponse } from "@common/serverApi";
+import { GetMessagesRequest, GetMessagesResponse, GetMessageRequest, GetMessageResponse, GetUserRequest, GetUserResponse, LoginCredentials, RegisterCredentials, SendMessageRequest, SendMessageResponse, SessionStartResponse, WhoamiResponse, GetChannelRequest, GetChannelResponse, GetServerRequest, GetServerResponse, CreateServerRequest, CreateChannelRequest, CreateServerResponse, CreateChannelResponse, GetMembersRequest, GetMembersResponse, CreateInviteRequest, CreateInviteResponse, JoinServerRequest, JoinServerResponse } from "@common/serverApi";
 import path from "path";
 
 export const serverEndpoint = document.location.protocol + "//" + document.location.host;
@@ -79,4 +79,13 @@ export async function createServer(server: CreateServerRequest) {
 }
 export async function createChannel(channel: CreateChannelRequest) {
     return await request("create-channel", "POST", channel, token) as CreateChannelResponse;
+}
+export async function getMembers(server: GetMembersRequest) {
+    return await request("members", "GET", server, token) as GetMembersResponse;
+}
+export async function createInvite(server: CreateInviteRequest) {
+    return await request("create-invite", "POST", server, token) as CreateInviteResponse;
+}
+export async function joinServer(invite: JoinServerRequest) {
+    return await request("join-server", "POST", invite, token) as JoinServerResponse;
 }

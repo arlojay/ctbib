@@ -6,7 +6,7 @@ import { Account, AccountManager } from "./accounts";
 import { IncomingHttpHeaders } from "node:http";
 import { Router, WebSocketExpress } from "websocket-express";
 import { UserSocketSession } from "./user/userSocketSession";
-import { MessagePacket } from "@common/packet";
+import { ChannelPacket, MessagePacket, UserJoinPacket } from "@common/packet";
 import { ObjectId } from "mongodb";
 import { Channel, ChatManager, Message, Server } from "./chat";
 import { createServer } from "node:https";
@@ -125,10 +125,6 @@ async function initExpress() {
     })
     api.get("/whoami", async (req, res) => {
         const account: Account = res.locals.account;
-
-        if(account.servers.length == 0 && process.env.DEFAULT_SERVER_UUID) {
-            account.servers.push(ObjectId.createFromHexString(process.env.DEFAULT_SERVER_UUID));
-        }
         
         res.send({
             uuid: account.uuid.toHexString(),
@@ -184,7 +180,11 @@ async function initExpress() {
 
         res.status(200).send({ uuid: packet.message.uuid } as ServerApi.SendMessageResponse);
 
-        sessionSocketLists.values().forEach(socketList => {
+        sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
+            const account = accountManager.findBySessionToken(sessionToken);
+
+            if(!account.servers.some(uuid => uuid.toHexString() == channel.server.uuid.toHexString())) return;
+
             socketList.forEach(socket => {
                 socket.send(packet);
             });
@@ -245,6 +245,8 @@ async function initExpress() {
     });
     api.get("/channel", async (req, res) => {
         const { uuid, server } = req.query as any as ServerApi.GetChannelRequest;
+        
+        if(typeof uuid != "string" || typeof server != "string") return res.status(400).send({ error: "Malformed request" });
 
         const channel = await chatManager.getChannel(
             ObjectId.createFromHexString(uuid),
@@ -264,6 +266,9 @@ async function initExpress() {
     });
     api.get("/server", async (req, res) => {
         const { uuid } = req.query as any as ServerApi.GetServerRequest;
+        const account: Account = res.locals.account;
+        
+        if(typeof uuid != "string") return res.status(400).send({ error: "Malformed request" });
 
         const server = await chatManager.getServer(
             ObjectId.createFromHexString(uuid),
@@ -274,12 +279,39 @@ async function initExpress() {
             return res.status(404).send({ error: "Server not found" });
         }
 
+        if(!account.servers.some(id => id.equals(server.uuid))) return res.status(403).send({ error: "Forbidden" });
+
         res.status(200).send({
             uuid: server.uuid.toHexString(),
             name: server.name,
             channels: server.channels.keys().toArray(),
             owner: server.owner?.uuid.toHexString()
         } as ServerApi.GetServerResponse);
+    });
+    api.get("/members", async (req, res) => {
+        const { uuid } = req.query as any as ServerApi.GetMembersRequest;
+        const account: Account = res.locals.account;
+        
+        if(typeof uuid != "string") return res.status(400).send({ error: "Malformed request" });
+
+        const server = await chatManager.getServer(
+            ObjectId.createFromHexString(uuid),
+            accountManager
+        );
+        if(!account.servers.some(id => id.equals(server.uuid))) return res.status(403).send({ error: "Forbidden" });
+
+        if(server == null) {
+            return res.status(404).send({ error: "Server not found" });
+        }
+
+        const members = await accountManager.getServerMembers(server);
+
+        res.status(200).send({
+            members: members.map(member => ({
+                uuid: member.uuid.toHexString(),
+                username: member.username
+            }))
+        } as ServerApi.GetMembersResponse);
     });
     api.post("/create-server", async (req, res) => {
         const { name } = req.body as any as ServerApi.CreateServerRequest;
@@ -314,13 +346,80 @@ async function initExpress() {
 
         server.addChannel(channel);
         await chatManager.updateServer(server);
+
+        const packet = new ChannelPacket;
+        packet.channel.uuid = channel.uuid.toHexString();
+        packet.channel.name = channel.name;
+        packet.channel.server = channel.server.uuid.toHexString();
+
+        sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
+            const account = accountManager.findBySessionToken(sessionToken);
+
+            if(!account.servers.some(uuid => uuid.toHexString() == channel.server.uuid.toHexString())) return;
+            
+            socketList.forEach(socket => {
+                socket.send(packet);
+            });
+        });
         
         return res.status(200).send({
             uuid: channel.uuid.toHexString(),
             server: serverUUID,
             name
         } as ServerApi.CreateChannelResponse)
-    })
+    });
+    api.post("/create-invite", async (req, res) => {
+        const { server: serverUUID } = req.body as any as ServerApi.CreateInviteRequest;
+        const account: Account = res.locals.account;
+
+        if(typeof serverUUID != "string") return res.status(400).send({ error: "Malformed request" });
+
+        const server = await chatManager.getServer(ObjectId.createFromHexString(serverUUID), accountManager);
+        if(server == null) return res.status(404).send({ error: "Server not found" });
+        if(account != server.owner) return res.status(403).send({ error: "Forbidden" });
+
+        const invite = await chatManager.createInvite(server, account);
+
+        res.status(200).send({
+            code: invite.code
+        } as ServerApi.CreateInviteResponse);
+    });
+    api.post("/join-server", async (req, res) => {
+        const { code } = req.body as any as ServerApi.JoinServerRequest;
+        const account: Account = res.locals.account;
+
+        const invite = await chatManager.getInvite(code, accountManager);
+        if(invite == null) return res.status(404).send({ error: "Invite not found" });
+
+        const server = await chatManager.getServer(invite.server, accountManager);
+        if(invite == null) return res.status(404).send({ error: "Target server not found" });
+
+        if(account.servers.some(uuid => uuid.toHexString() == server.uuid.toHexString()))  {
+            return res.status(400).send({ error: "Already in server" });
+        }
+
+        const packet = new UserJoinPacket;
+        packet.server = server.uuid.toHexString();
+        packet.user.uuid = account.uuid.toHexString();
+        packet.user.username = account.username;
+
+        sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
+            const account = accountManager.findBySessionToken(sessionToken);
+
+            if(!account.servers.some(uuid => uuid.toHexString() == server.uuid.toHexString())) return;
+            
+            socketList.forEach(socket => {
+                socket.send(packet);
+            });
+        });
+        
+        account.servers.push(server.uuid);
+        await accountManager.updateAccount(account);
+
+        res.status(200).send({
+            uuid: server.uuid.toHexString()
+        } as ServerApi.JoinServerResponse)
+    });
     api.use((req, res) => {
         res.status(404).send({ error: "Not found" });
     });

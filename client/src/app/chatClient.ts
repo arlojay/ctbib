@@ -1,15 +1,16 @@
-import { ChannelPacket, MessagePacket, Packet, packetRegistry } from "@common/packet";
+import { ChannelPacket, MessagePacket, Packet, packetRegistry, UserJoinPacket } from "@common/packet";
 import { serverEndpoint } from "./serverApi";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { BinaryBuffer } from "@common/serialization/binaryBuffer";
 import { BinaryMessage } from "@common/chatbin/message";
-import { BinaryChannel } from "@common/chatbin";
+import { BinaryChannel, BinaryUser } from "@common/chatbin";
 
 interface ChatClientEvents {
     "disconnected": () => void;
     "connected": () => void;
     "message": (message: BinaryMessage) => void;
     "channel-create": (channel: BinaryChannel) => void;
+    "user-join": (user: BinaryUser, server: string) => void;
 }
 
 export class ChatClient extends TypedEmitter<ChatClientEvents> {
@@ -62,6 +63,9 @@ export class ChatClient extends TypedEmitter<ChatClientEvents> {
         }
         if(packet instanceof ChannelPacket) {
             this.emit("channel-create", packet.channel);
+        }
+        if(packet instanceof UserJoinPacket) {
+            this.emit("user-join", packet.user, packet.server);
         }
     }
 }

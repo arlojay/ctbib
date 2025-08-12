@@ -46,8 +46,11 @@ export function createChannelListScreen(events: ChannelListEvents, options: Chan
 
     let lastSelected: Channel;
     const channelElements: Map<Channel, HTMLDivElement> = new Map;
+    const addedChannels: Set<string> = new Set;
     
     function addChannel(channel: Channel) {
+        if(addedChannels.has(channel.uuid)) return;
+        
         const box = createChannelBox(channel);
         box.addEventListener("click", () => {
             if(channel == lastSelected) return;
@@ -55,6 +58,7 @@ export function createChannelListScreen(events: ChannelListEvents, options: Chan
         })
         list.append(box);
         channelElements.set(channel, box);
+        addedChannels.add(channel.uuid);
     }
 
     events.on("load", channels => {

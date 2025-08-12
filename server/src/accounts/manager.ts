@@ -1,6 +1,7 @@
 import { Db, MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import { Account, SerializedAccount } from "./account";
 import { Login, SerializedLogin } from "./login";
+import { Server } from "../chat";
 
 export class AccountManager {
     private mongo: MongoClient;
@@ -95,5 +96,26 @@ export class AccountManager {
 
     public async updateAccount(account: Account) {
         await this.db.collection("accounts").replaceOne({ _id: account.uuid }, account.serialize());
+    }
+    
+    public async getServerMembers(server: Server) {
+        const dbAccounts = await this.db.collection("accounts").find({ servers: { $in: [ server.uuid ] } }).toArray() as SerializedAccount[];
+
+        let accounts: Account[] = new Array;
+
+        for(const dbAccount of dbAccounts) {
+            const uuid = dbAccount._id.toHexString();
+            if(this.accounts.has(uuid)) {
+                accounts.push(this.accounts.get(uuid));
+                continue;
+            }
+            const account = new Account;
+            await account.deserialize(dbAccount, this);
+
+            this.accounts.set(uuid, account);
+            accounts.push(account);
+        }
+
+        return accounts;
     }
 }

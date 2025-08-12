@@ -7,7 +7,8 @@ export class ServerListEvents extends TypedEmitter<{
     "fetch": () => void;
     "open": (server: Server) => void;
     "create-server": () => void;
-        "select-server": (server: Server) => void;
+    "select-server": (server: Server) => void;
+    "join-server": () => void;
 }> {}
 
 function createServerBox(server: Server) {
@@ -58,6 +59,17 @@ export function createServerListScreen(events: ServerListEvents) {
     const actions = document.createElement("div");
     actions.classList.add("actions");
 
+
+    const joinServerButton = document.createElement("button");
+    joinServerButton.textContent = "Join Server";
+
+    joinServerButton.addEventListener("click", () => {
+        events.emit("join-server");
+    });
+
+    actions.append(joinServerButton);
+
+    
     const createServerButton = document.createElement("button");
     createServerButton.textContent = "New Server";
 

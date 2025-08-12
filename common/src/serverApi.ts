@@ -93,3 +93,25 @@ export interface CreateChannelResponse {
     server: string;
     name: string;
 }
+export interface ServerMemberJson {
+    uuid: string,
+    username: string
+}
+export interface GetMembersRequest {
+    uuid: string;
+}
+export interface GetMembersResponse {
+    members: ServerMemberJson[];
+}
+export interface CreateInviteRequest {
+    server: string;
+}
+export interface CreateInviteResponse {
+    code: string;
+}
+export interface JoinServerRequest {
+    code: string;
+}
+export interface JoinServerResponse {
+    uuid: string;
+}

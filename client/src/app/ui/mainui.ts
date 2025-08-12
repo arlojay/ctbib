@@ -4,6 +4,7 @@ export class MainUI {
     public serverList: HTMLDivElement;
     public channelList: HTMLDivElement;
     public chatScreen: HTMLDivElement;
+    public membersList: HTMLDivElement;
     public loginScreen: HTMLDivElement;
     
     constructor() {
@@ -19,9 +20,12 @@ export class MainUI {
         this.chatScreen = document.createElement("div");
         this.chatScreen.classList.add("chat");
 
+        this.membersList = document.createElement("div");
+        this.membersList.classList.add("chat");
+
         this.loginScreen = document.createElement("div");
         this.loginScreen.classList.add("account");
 
-        this.root.append(this.serverList, this.channelList, this.chatScreen, this.loginScreen);
+        this.root.append(this.serverList, this.channelList, this.chatScreen, this.membersList, this.loginScreen);
     }
 }
