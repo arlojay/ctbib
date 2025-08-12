@@ -34,6 +34,28 @@ button, input {
         &[hidden] {
             display: none;
         }
+
+        .register, .login {
+            form > div {
+                position: relative;
+
+                height: 2.5rem;
+                
+                input {
+                    margin-left: 0.5rem;
+                }
+            }
+            .error {
+                position: absolute;
+                bottom: 0;
+                
+                display: block;
+                color: red;
+                font-size: 0.75rem;
+                margin-bottom: 0.5rem;
+                height: 1em;
+            }
+        }
     }
 
     &:has(.account:not([hidden])) {

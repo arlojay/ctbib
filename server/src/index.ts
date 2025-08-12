@@ -11,6 +11,7 @@ import { ObjectId } from "mongodb";
 import { Channel, ChatManager, Message, Server } from "./chat";
 import { createServer } from "node:https";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { validateChannelName, validateMessage, validatePassword, validateServerName, validateUsername } from "@common/validation";
 
 let accountManager: AccountManager;
 let chatManager: ChatManager;
@@ -75,9 +76,16 @@ async function initExpress() {
         }
     });
     api.post("/register", async (req, res) => {
-        const { username, password } = req.body as ServerApi.RegisterCredentials;
+        let { username, password } = req.body as ServerApi.RegisterCredentials;
 
         if(typeof username != "string" || typeof password != "string") return res.status(400).send({ error: "Malformed request" });
+
+        try {
+            username = validateUsername(username);
+            password = validatePassword(password);
+        } catch(e) {
+            return res.status(400).send({ error: e });
+        }
 
         try {
             const account = new Account;
@@ -152,11 +160,16 @@ async function initExpress() {
         const account: Account = res.locals.account;
 
         const { content, server: serverUUID, channel: channelUUID } = req.body as ServerApi.SendMessageRequest;
-        if(typeof content != "string" || content.replace(/[\s\t\r\n]/g, "").length == 0) {
+        
+        if(typeof content != "string" || typeof serverUUID != "string" || typeof channelUUID != "string") {
             return res.status(400).send({ error: "Malformed request" });
         }
-        if(typeof serverUUID != "string" || typeof channelUUID != "string") {
-            return res.status(400).send({ error: "Malformed request" });
+
+        let trimmedContent = content;
+        try {
+            trimmedContent = validateMessage(content);
+        } catch(e) {
+            return res.status(400).send({ error: "Invalid message" });
         }
 
         const channel = await chatManager.getChannel(ObjectId.createFromHexString(channelUUID), ObjectId.createFromHexString(serverUUID), accountManager);
@@ -319,8 +332,15 @@ async function initExpress() {
 
         if(typeof name != "string") return res.status(400).send({ error: "Malformed request" });
 
+        let trimmedName = name;
+        try {
+            trimmedName = validateServerName(trimmedName);
+        } catch(e) {
+            return res.status(400).send({ error: e });
+        }
+
         const server = new Server;
-        server.name = name;
+        server.name = trimmedName;
         server.owner = account;
         await chatManager.createServer(server);
 
@@ -328,7 +348,7 @@ async function initExpress() {
         await accountManager.updateAccount(account);
 
         res.status(200).send({
-            name,
+            name: server.name,
             uuid: server.uuid.toHexString()
         } as ServerApi.CreateServerResponse);
     });
@@ -336,11 +356,20 @@ async function initExpress() {
         const { name, server: serverUUID } = req.body as any as ServerApi.CreateChannelRequest;
         const account: Account = res.locals.account;
 
+        if(typeof name != "string") return res.status(400).send({ error: "Malformed request" });
+
+        let trimmedName = name;
+        try {
+            trimmedName = validateChannelName(trimmedName);
+        } catch(e) {
+            return res.status(400).send({ error: e });
+        }
+
         const server = await chatManager.getServer(ObjectId.createFromHexString(serverUUID), accountManager);
-        if(account != server.owner) return res.status(403).send({ error: "Forbidden" });
+        if(!account.uuid.equals(server.owner.uuid)) return res.status(403).send({ error: "Forbidden" });
 
         const channel = new Channel;
-        channel.name = name;
+        channel.name = trimmedName;
         channel.server = server;
         await chatManager.createChannel(channel);
 
@@ -365,7 +394,7 @@ async function initExpress() {
         return res.status(200).send({
             uuid: channel.uuid.toHexString(),
             server: serverUUID,
-            name
+            name: channel.name
         } as ServerApi.CreateChannelResponse)
     });
     api.post("/create-invite", async (req, res) => {

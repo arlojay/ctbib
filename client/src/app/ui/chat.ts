@@ -1,6 +1,7 @@
 import { TypedEmitter } from "tiny-typed-emitter";
 import { Message } from "../chat/message";
 import { Channel } from "../chat";
+import { validateMessage } from "@common/validation";
 
 export class ChatScreenEvents extends TypedEmitter<{
     "send": (message: string) => void;
@@ -173,12 +174,17 @@ export function createChatScreen(events: ChatScreenEvents, options: ChatChannelO
             const content = messageField.value;
             messageField.value = "";
 
-            if(content.replace(/[\s\t\r\n]/g, "").length == 0) return;
-            events.emit("send", content);
+            try {
+                events.emit("send", validateMessage(content));
+            } catch(e) {
+                console.debug(e);
+            }
         })
 
         const messageField = document.createElement("input");
         messageField.type = "text";
+        messageField.autocomplete = "off";
+        messageField.maxLength = 2000;
 
         const submitButton = document.createElement("input");
         submitButton.type = "submit";
@@ -191,7 +197,7 @@ export function createChatScreen(events: ChatScreenEvents, options: ChatChannelO
         const channelTitlebar = document.createElement("div");
         channelTitlebar.classList.add("titlebar");
 
-        const channelName = document.createElement("span")
+        const channelName = document.createElement("span");
         channelName.classList.add("name");
         channelName.textContent = options.channelName;
 

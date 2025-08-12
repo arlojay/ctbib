@@ -5,7 +5,13 @@ export const serverEndpoint = document.location.protocol + "//" + document.locat
 
 type RequestMethod = "POST" | "GET";
 
-export class ServerError extends Error {}
+export class ServerError extends Error {
+    public type: string;
+    constructor(message: string, options?: ErrorOptions & { type: string }) {
+        super(message, options);
+        this.type = options.type;
+    }
+}
 
 async function request(endpoint: string, method: RequestMethod, payload?: object, authorization?: string) {
     const options: RequestInit = { method, headers: {} };
@@ -27,12 +33,12 @@ async function request(endpoint: string, method: RequestMethod, payload?: object
 
     try {
         const response = await fetch(endpointURL, options);
-        if(response.status == 500) throw new ServerError("Internal server error");
+        if(response.status == 500) throw new ServerError("Internal server error", { type: "500" });
 
         const data = await response.json();
 
         if("error" in data) {
-            throw new ServerError(data.error);
+            throw new ServerError(data.error, { type: "response" });
         }
 
         return data;

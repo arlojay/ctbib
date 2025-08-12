@@ -81,9 +81,23 @@ function openServerList(whoami: WhoamiResponse) {
         const serverName = prompt("Enter server name:");
         if(serverName == null) return;
 
-        const serverData = await ServerApi.createServer({ name: serverName });
-        const server = await clientCache.getServer(serverData.uuid);
-        events.emit("add-server", server);
+        try {
+            const serverData = await ServerApi.createServer({ name: serverName });
+            const server = await clientCache.getServer(serverData.uuid);
+            events.emit("add-server", server);
+            events.emit("select-server", server);
+            openChannelList(server);
+            openMembersList(server);
+        } catch(e) {
+            let baseError = e;
+            while(baseError.cause != null) baseError = baseError.cause;
+
+            if(baseError instanceof ServerApi.ServerError) {
+                alert("Error while making server: " + baseError.message);
+            } else {
+                throw e;
+            }
+        }
     });
     events.on("join-server", async () => {
         const inviteCode = prompt("Enter invite code:");
@@ -94,6 +108,7 @@ function openServerList(whoami: WhoamiResponse) {
         events.emit("add-server", server);
         events.emit("select-server", server);
         openChannelList(server);
+        openMembersList(server);
     });
     const serverList = createServerList(events);
     mainUI.serverList.replaceWith(serverList);
@@ -142,9 +157,20 @@ function openChannelList(server: Server) {
         const channelName = prompt("Enter channel name:");
         if(channelName == null) return;
 
-        const channelData = await ServerApi.createChannel({ name: channelName, server: server.uuid });
-        const channel = await clientCache.addChannel(channelData);
-        events.emit("add-channel", channel);
+        try {
+            const channelData = await ServerApi.createChannel({ name: channelName, server: server.uuid });
+            const channel = await clientCache.addChannel(channelData);
+            events.emit("add-channel", channel);
+        } catch(e) {
+            let baseError = e;
+            while(baseError.cause != null) baseError = baseError.cause;
+
+            if(baseError instanceof ServerApi.ServerError) {
+                alert("Error while making channel: " + baseError.message);
+            } else {
+                throw e;
+            }
+        }
     });
     console.log(server, clientCache.getSelfUser());
     const channelList = createChannelList(events, {

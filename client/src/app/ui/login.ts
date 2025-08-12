@@ -1,5 +1,6 @@
 import { SessionStartResponse } from "@common/serverApi";
 import * as ServerApi from "../serverApi";
+import { validatePassword, validateUsername } from "@common/validation";
 
 export function createLoginPrompt(callback: (response: SessionStartResponse) => void) {
     const root = document.createElement("div");
@@ -19,11 +20,19 @@ export function createLoginPrompt(callback: (response: SessionStartResponse) => 
         const password = passwordField.value;
 
         try {
+            passwordError.textContent = "";
             const response = await ServerApi.login({ username, password });
 
             callback(response);
         } catch(e) {
-            console.error(e);
+            let baseError = e;
+            while(baseError.cause != null) baseError = baseError.cause;
+
+            if(baseError instanceof ServerApi.ServerError && baseError.type == "response") {
+                passwordError.textContent = baseError.message;
+            } else {
+                console.error(e);
+            }
         }
     });
 
@@ -35,6 +44,7 @@ export function createLoginPrompt(callback: (response: SessionStartResponse) => 
     usernameLabel.textContent = "Username";
     const usernameField = document.createElement("input");
     usernameField.type = "text";
+    usernameField.autocomplete = "username";
 
     usernameContainer.append(usernameLabel, usernameField);
 
@@ -46,8 +56,12 @@ export function createLoginPrompt(callback: (response: SessionStartResponse) => 
     passwordLabel.textContent = "Password";
     const passwordField = document.createElement("input");
     passwordField.type = "password";
+    passwordField.autocomplete = "current-password";
 
-    passwordContainer.append(passwordLabel, passwordField);
+    const passwordError = document.createElement("span");
+    passwordError.classList.add("error");
+
+    passwordContainer.append(passwordLabel, passwordField, passwordError);
 
 
     const submitButton = document.createElement("input");
@@ -84,10 +98,18 @@ export function createRegisterPrompt(callback: (response: SessionStartResponse) 
             if(password != passwordConfirm) throw new Error("Passwords do not match");
 
             const response = await ServerApi.register({ username, password });
+            usernameError.textContent = "";
 
             callback(response);
         } catch(e) {
-            console.error(e);
+            let baseError = e;
+            while(baseError.cause != null) baseError = baseError.cause;
+
+            if(baseError instanceof ServerApi.ServerError && baseError.type == "response") {
+                usernameError.textContent = baseError.message;
+            } else {
+                console.error(e);
+            }
         }
     });
 
@@ -99,8 +121,21 @@ export function createRegisterPrompt(callback: (response: SessionStartResponse) 
     usernameLabel.textContent = "Username";
     const usernameField = document.createElement("input");
     usernameField.type = "text";
+    usernameField.autocomplete = "username";
 
-    usernameContainer.append(usernameLabel, usernameField);
+    usernameField.addEventListener("input", () => {
+        try {
+            validateUsername(usernameField.value);
+            usernameError.textContent = "";
+        } catch(e) {
+            usernameError.textContent = e;
+        }
+    })
+
+    const usernameError = document.createElement("span");
+    usernameError.classList.add("error");
+
+    usernameContainer.append(usernameLabel, usernameField, usernameError);
 
 
     const passwordContainer = document.createElement("div");
@@ -110,8 +145,23 @@ export function createRegisterPrompt(callback: (response: SessionStartResponse) 
     passwordLabel.textContent = "Password";
     const passwordField = document.createElement("input");
     passwordField.type = "password";
+    passwordField.autocomplete = "new-password";
 
-    passwordContainer.append(passwordLabel, passwordField);
+    passwordField.addEventListener("input", () => {
+        try {
+            validatePassword(passwordField.value);
+            passwordError.textContent = "";
+        } catch(e) {
+            passwordError.textContent = e;
+        }
+
+        updatePasswordConfirm();
+    })
+
+    const passwordError = document.createElement("span");
+    passwordError.classList.add("error");
+
+    passwordContainer.append(passwordLabel, passwordField, passwordError);
 
 
     const passwordConfirmContainer = document.createElement("div");
@@ -121,8 +171,24 @@ export function createRegisterPrompt(callback: (response: SessionStartResponse) 
     passwordConfirmLabel.textContent = "Confirm Password";
     const passwordConfirmField = document.createElement("input");
     passwordConfirmField.type = "password";
+    passwordConfirmField.autocomplete = "new-password";
 
-    passwordConfirmContainer.append(passwordConfirmLabel, passwordConfirmField);
+    passwordConfirmField.addEventListener("input", () => {
+        updatePasswordConfirm();
+    })
+
+    function updatePasswordConfirm() {
+        if(passwordField.value == passwordConfirmField.value) {
+            passwordConfirmError.textContent = "";
+        } else {
+            passwordConfirmError.textContent = "Passwords do not match";
+        }
+    }
+
+    const passwordConfirmError = document.createElement("span");
+    passwordConfirmError.classList.add("error");
+
+    passwordConfirmContainer.append(passwordConfirmLabel, passwordConfirmField, passwordConfirmError);
 
 
     const submitButton = document.createElement("input");
