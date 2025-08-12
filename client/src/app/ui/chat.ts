@@ -2,9 +2,11 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { Message } from "../chat/message";
 import { Channel } from "../chat";
 import { validateMessage } from "@common/validation";
+import { clientCache } from "../clientCache";
 
 export class ChatScreenEvents extends TypedEmitter<{
-    "send": (message: string) => void;
+    "send": (message: string, nonce: Symbol) => void;
+    "send-success": (nonce: Symbol) => void;
     "receive": (message: Message) => void;
     "load": (message: Message) => void;
     "fetch": (fromMessage: string, count: number) => void;
@@ -107,7 +109,7 @@ function createChatMessage(message: Message, mergeBefore: HTMLDivElement, assimi
 }
 
 interface ChatChannelOptions {
-    channelName: string;
+    channel: Channel;
     exists: boolean;
 }
 
@@ -120,6 +122,7 @@ export function createChatScreen(events: ChatScreenEvents, options: ChatChannelO
     logs.classList.add("logs");
 
     const messageElements: Map<Message, HTMLDivElement> = new Map;
+    const outgoingMessages: Map<Symbol, HTMLElement> = new Map;
 
     function addMessage(message: Message) {
         const { succeeding, preceding } = findChronologicallyAdjacentMessages(messageElements.keys(), message);
@@ -159,10 +162,16 @@ export function createChatScreen(events: ChatScreenEvents, options: ChatChannelO
         }
 
         messageElements.set(message, element);
+        return (mergeBefore ? element.querySelector(".text:last-child") : element.querySelector(".text")) as HTMLElement;
     }
 
     events.on("receive", addMessage);
     events.on("load", addMessage);
+
+    events.on("send-success", nonce => {
+        const element = outgoingMessages.get(nonce);
+        element.classList.remove("sending");
+    })
 
     if(options.exists) {
         const inputContainer = document.createElement("div");
@@ -174,12 +183,21 @@ export function createChatScreen(events: ChatScreenEvents, options: ChatChannelO
             const content = messageField.value;
             messageField.value = "";
 
+            let trimmedContent = content;
             try {
-                events.emit("send", validateMessage(content));
+                trimmedContent = validateMessage(trimmedContent);
             } catch(e) {
                 console.debug(e);
+                return;
             }
-        })
+            const nonce = Symbol(crypto.randomUUID());
+            const localMessage = new Message(nonce.toString(), clientCache.getSelfUser(), options.channel, trimmedContent, new Date);
+            events.emit("send", trimmedContent, nonce);
+            const textElement = addMessage(localMessage);
+            
+            textElement.classList.add("sending");
+            outgoingMessages.set(nonce, textElement);
+        });
 
         const messageField = document.createElement("input");
         messageField.type = "text";
@@ -199,7 +217,7 @@ export function createChatScreen(events: ChatScreenEvents, options: ChatChannelO
 
         const channelName = document.createElement("span");
         channelName.classList.add("name");
-        channelName.textContent = options.channelName;
+        channelName.textContent = options.channel?.name ?? "Unknown Channel";
 
         channelTitlebar.append(channelName);
 

@@ -221,8 +221,9 @@ function openChatScreen(channel: Channel) {
         events.emit("receive", message);
     });
 
-    events.on("send", async message => {
+    events.on("send", async (message, nonce) => {
         await ServerApi.sendMessage({ content: message, channel: channel.uuid, server: channel.server.uuid });
+        events.emit("send-success", nonce);
     });
     events.on("fetch", async (fromMessage, count) => {
         const response = await ServerApi.fetchMessages({ from: fromMessage, channel: channel.uuid, server: channel.server.uuid, count });
@@ -234,7 +235,7 @@ function openChatScreen(channel: Channel) {
     });
     
     const chatScreen = createChatScreen(events, {
-        channelName: channel?.name,
+        channel,
         exists: channel != null
     });
     mainUI.chatScreen.replaceWith(chatScreen);
