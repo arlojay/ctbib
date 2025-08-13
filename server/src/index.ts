@@ -6,7 +6,7 @@ import { Account, AccountManager } from "./accounts";
 import { IncomingHttpHeaders } from "node:http";
 import { Router, WebSocketExpress } from "websocket-express";
 import { UserSocketSession } from "./user/userSocketSession";
-import { AuthorizationStatePacket, ChannelPacket, MessagePacket, UserJoinPacket } from "@common/packet";
+import { AuthorizationStatePacket, ChannelPacket, MessagePacket, UserJoinPacket, UserStatusChangePacket } from "@common/packet";
 import { ObjectId } from "mongodb";
 import { Channel, ChatManager, Message, Server } from "./chat";
 import { createServer } from "node:https";
@@ -16,6 +16,16 @@ import { validateChannelName, validateMessage, validatePassword, validateServerN
 let accountManager: AccountManager;
 let chatManager: ChatManager;
 const sessionSocketLists: Map<string, Set<UserSocketSession>> = new Map;
+const accountOpenSockets: Map<string, number> = new Map;
+function getOpenSocketCount(account: Account) {
+    const uuid = account.uuid.toHexString();
+    if(accountOpenSockets.has(uuid)) return accountOpenSockets.get(uuid);
+    return 0;
+}
+function setOpenSocketCount(account: Account, count: number) {
+    const uuid = account.uuid.toHexString();
+    accountOpenSockets.set(uuid, count);
+}
 
 main();
 
@@ -118,10 +128,45 @@ async function initExpress() {
         } else {
             authPacket.success = true;
             const socketList = sessionSocketLists.get(token) ?? new Set;
+
+            if(getOpenSocketCount(account) == 0) {
+                const packet = new UserStatusChangePacket;
+                packet.uuid = account.uuid.toHexString();
+                packet.online = true;
+                console.log(packet);
+                sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
+                    const socketAccount = accountManager.findBySessionToken(sessionToken);
+                    if(socketAccount == account) return;;
+                    if(!socketAccount.sharesServers(account)) return;
+
+                    socketList.forEach(socket => {
+                        socket.send(packet);
+                    });
+                });
+            }
             
-            socket.once("close", () => socketList.delete(socket));
+            socket.once("close", () => {
+                socketList.delete(socket);
+                setOpenSocketCount(account, getOpenSocketCount(account) - 1);
+
+                if(getOpenSocketCount(account) == 0) {
+                    const packet = new UserStatusChangePacket;
+                    packet.uuid = account.uuid.toHexString();
+                    packet.online = false;
+                    sessionSocketLists.entries().forEach(([sessionToken, socketList]) => {
+                        const socketAccount = accountManager.findBySessionToken(sessionToken);
+                        if(socketAccount == account) return;
+                        if(!socketAccount.sharesServers(account)) return;
+
+                        socketList.forEach(socket => {
+                            socket.send(packet);
+                        });
+                    });
+                }
+            });
             socketList.add(socket);
             sessionSocketLists.set(token, socketList);
+            setOpenSocketCount(account, getOpenSocketCount(account) + 1);
         }
         socket.send(authPacket);
     });
@@ -161,7 +206,8 @@ async function initExpress() {
         
         res.send({
             uuid: queriedAccount.uuid.toHexString(),
-            username: queriedAccount.username
+            username: queriedAccount.username,
+            online: accountOpenSockets.get(queriedAccount.uuid.toHexString()) > 0
         } as ServerApi.GetUserResponse);
     });
     api.post("/send", async (req, res) => {
@@ -331,7 +377,8 @@ async function initExpress() {
         res.status(200).send({
             members: members.map(member => ({
                 uuid: member.uuid.toHexString(),
-                username: member.username
+                username: member.username,
+                online: accountOpenSockets.get(member.uuid.toHexString()) > 0
             }))
         } as ServerApi.GetMembersResponse);
     });
@@ -433,7 +480,7 @@ async function initExpress() {
         const server = await chatManager.getServer(invite.server, accountManager);
         if(invite == null) return res.status(404).send({ error: "Target server not found" });
 
-        if(account.servers.some(uuid => uuid.toHexString() == server.uuid.toHexString()))  {
+        if(account.servers.some(uuid => uuid.equals(server.uuid)))  {
             return res.status(400).send({ error: "Already in server" });
         }
 
@@ -449,7 +496,7 @@ async function initExpress() {
             const socketAccount = accountManager.findBySessionToken(sessionToken);
             if(socketAccount == account) return;
 
-            if(!socketAccount.servers.some(uuid => uuid.toHexString() == server.uuid.toHexString())) return;
+            if(!socketAccount.servers.some(uuid => uuid.equals(server.uuid))) return;
             
             socketList.forEach(socket => {
                 socket.send(packet);

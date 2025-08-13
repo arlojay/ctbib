@@ -247,6 +247,10 @@ button, input {
                 &.owner {
                     background: yellow;
                 }
+                &:not(.online) {
+                    background: #888;
+                    opacity: 0.5;
+                }
             }
         }
 

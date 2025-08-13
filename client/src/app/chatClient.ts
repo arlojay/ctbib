@@ -1,4 +1,4 @@
-import { AuthorizationStatePacket, ChannelPacket, MessagePacket, Packet, packetRegistry, PingPacket, UserJoinPacket } from "@common/packet";
+import { AuthorizationStatePacket, ChannelPacket, MessagePacket, Packet, packetRegistry, PingPacket, UserJoinPacket, UserStatusChangePacket } from "@common/packet";
 import { serverEndpoint } from "./serverApi";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { BinaryBuffer } from "@common/serialization/binaryBuffer";
@@ -12,6 +12,7 @@ interface ChatClientEvents {
     "message": (message: BinaryMessage) => void;
     "channel-create": (channel: BinaryChannel) => void;
     "user-join": (user: BinaryUser, server: string) => void;
+    "user-status-change": (uuid: string, online: boolean) => void;
 }
 
 export class ChatClient extends TypedEmitter<ChatClientEvents> {
@@ -119,6 +120,10 @@ export class ChatClient extends TypedEmitter<ChatClientEvents> {
         }
         if(packet instanceof UserJoinPacket) {
             this.emit("user-join", packet.user, packet.server);
+        }
+        if(packet instanceof UserStatusChangePacket) {
+            console.log(packet);
+            this.emit("user-status-change", packet.uuid, packet.online);
         }
         if(packet instanceof PingPacket) {
             this.lastReceivedPing = performance.now();

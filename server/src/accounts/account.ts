@@ -53,4 +53,11 @@ export class Account {
         this.sessions.add(token);
         return token;
     }
+
+    public sharesServers(account: Account) {
+        for(const server of account.servers) {
+            if(this.servers.some(uuid => uuid.equals(server))) return true;
+        }
+        return false;
+    }
 }

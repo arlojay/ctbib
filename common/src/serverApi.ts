@@ -28,6 +28,7 @@ export interface GetUserRequest {
 export interface GetUserResponse {
     uuid: string;
     username: string;
+    online: boolean;
 }
 export interface JsonMessage {
     uuid: string;
@@ -94,8 +95,9 @@ export interface CreateChannelResponse {
     name: string;
 }
 export interface ServerMemberJson {
-    uuid: string,
-    username: string
+    uuid: string;
+    username: string;
+    online: boolean;
 }
 export interface GetMembersRequest {
     uuid: string;

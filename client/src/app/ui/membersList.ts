@@ -6,6 +6,7 @@ export class MemberListEvents extends TypedEmitter<{
     "load": (members: ServerMemberJson[]) => void;
     "create-invite": () => void;
     "add-user": (user: ServerMemberJson) => void;
+    "user-status-change": (uuid: string, online: boolean) => void;
 }> {}
 
 interface MemberListOptions {
@@ -59,6 +60,7 @@ export function createMembersListScreen(events: MemberListEvents, options: Membe
     function createMemberCard(member: ServerMemberJson) {
         const card = document.createElement("div");
         card.classList.add("member");
+        if(member.online) card.classList.add("online");
         
         const memberName = document.createElement("span");
         memberName.classList.add("name");
@@ -96,6 +98,13 @@ export function createMembersListScreen(events: MemberListEvents, options: Membe
         }
     });
     events.on("add-user", addMember);
+    events.on("user-status-change", (uuid, online) => {
+        const card = memberElements.get(uuid);
+        if(card == null) return;
+        
+        if(online) card.classList.add("online");
+        else card.classList.remove("online");
+    })
 
 
     const actions = document.createElement("div");

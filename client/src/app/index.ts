@@ -137,6 +137,9 @@ function openMembersList(server: Server) {
         if(serverUUID != server.uuid) return;
         
         events.emit("add-user", user);
+    });
+    chatClient.on("user-status-change", (uuid, online) => {
+        events.emit("user-status-change", uuid, online);
     })
     events.on("fetch", async () => {
         const response = await ServerApi.getMembers({ uuid: server.uuid });
