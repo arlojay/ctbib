@@ -569,9 +569,7 @@ function getSSLCertificates(directory: string) {
     return null;
 }
 async function initMongo() {
-    const accountsClusterURI = process.env.ACCOUNTS_CLUSTER_URI ?? readFileSync("/run/secrets/accounts_cluster_uri").toString();
-    console.log(accountsClusterURI);
-    accountManager = new AccountManager(accountsClusterURI);
+    accountManager = new AccountManager(process.env.ACCOUNTS_CLUSTER_URI ?? readFileSync("/run/secrets/accounts_cluster_uri").toString());
     await accountManager.connect();
     
     chatManager = new ChatManager(process.env.CHAT_CLUSTER_URI ?? readFileSync("/run/secrets/chat_cluster_uri").toString());
